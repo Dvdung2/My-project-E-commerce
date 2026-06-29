@@ -1,0 +1,60 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+
+# Frontend
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vite/
+Frontend/.cache/
+Frontend/coverage/
+
+# .NET / ASP.NET Core
+**/bin/
+**/obj/
+**/TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Build artifacts
+artifacts/
+publish/
+out/
+dist/
+coverage/
+
+# Docker and database local data
+docker-data/
+*.mdf
+*.ldf
+*.bak
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
