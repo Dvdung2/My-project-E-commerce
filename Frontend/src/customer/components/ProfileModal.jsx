@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@/shared/context/AuthContext'
 import { updateProfile, getMyOrders, cancelOrder, changePassword, downloadInvoice,
-  getAddresses, createAddress, deleteAddress, setDefaultAddress } from '../services/api'
+  getAddresses, createAddress, deleteAddress, setDefaultAddress } from '@/shared/services/api'
 
 const STATUS_LABEL = {
   0: 'Chờ xử lý', 1: 'Đang xử lý', 2: 'Đang giao', 3: 'Đã giao', 4: 'Đã hủy'

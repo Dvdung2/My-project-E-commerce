@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { login, register } from '../services/api'
-import { useAuth } from '../context/AuthContext'
+import { login, register } from '@/shared/services/api'
+import { useAuth } from '@/shared/context/AuthContext'
 
 export default function AuthModal({ mode: initialMode, onClose }) {
   const [mode, setMode] = useState(initialMode || 'login')

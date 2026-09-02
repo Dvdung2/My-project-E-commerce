@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { createOrder, validateCoupon, getAddresses } from '../services/api'
-import { useAuth } from '../context/AuthContext'
+import { createOrder, validateCoupon, getAddresses } from '@/shared/services/api'
+import { useAuth } from '@/shared/context/AuthContext'
 
 const FREE_SHIP_THRESHOLD = 100
 const FLAT_SHIP = 5

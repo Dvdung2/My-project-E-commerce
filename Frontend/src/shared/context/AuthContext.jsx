@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { getMe, logoutApi } from '../services/api'
+import { getMe, logoutApi } from '@/shared/services/api'
 
 const AuthContext = createContext(null)
 

@@ -10,7 +10,7 @@ import {
   updateCategory,
   updateOrderStatus,
   updateProduct
-} from '../services/api'
+} from '@/shared/services/api'
 
 const EMPTY_PRODUCT = {
   name: '',

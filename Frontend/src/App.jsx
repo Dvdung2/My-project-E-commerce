@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import * as signalR from '@microsoft/signalr'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import { I18nProvider } from './context/I18nContext'
+import { AuthProvider, useAuth } from '@/shared/context/AuthContext'
+import { I18nProvider } from '@/shared/context/I18nContext'
 import {
   getCart, addToCartApi, updateCartApi, removeFromCartApi, clearCartApi,
   getWishlistApi, toggleWishlistApi, removeWishlistApi
-} from './services/api'
-import Navbar from './components/Navbar'
-import HomePage from './pages/HomePage'
-import ProductsPage from './pages/ProductsPage'
-import ProductDetailPage from './pages/ProductDetailPage'
-import AdminDashboardPage from './pages/AdminDashboardPage'
-import CartPanel from './components/CartPanel'
-import CheckoutModal from './components/CheckoutModal'
-import WishlistPanel from './components/WishlistPanel'
-import AuthModal from './components/AuthModal'
-import ProfileModal from './components/ProfileModal'
-import Toast from './components/Toast'
+} from '@/shared/services/api'
+import Navbar from '@/customer/components/Navbar'
+import HomePage from '@/customer/pages/HomePage'
+import ProductsPage from '@/customer/pages/ProductsPage'
+import ProductDetailPage from '@/customer/pages/ProductDetailPage'
+import AdminDashboardPage from '@/admin/pages/AdminDashboardPage'
+import CartPanel from '@/customer/components/CartPanel'
+import CheckoutModal from '@/customer/components/CheckoutModal'
+import WishlistPanel from '@/customer/components/WishlistPanel'
+import AuthModal from '@/customer/components/AuthModal'
+import ProfileModal from '@/customer/components/ProfileModal'
+import Toast from '@/shared/components/Toast'
 
 const WISHLIST_KEY = 'shopvn_wishlist'
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -166,16 +166,18 @@ function AppContent() {
   return (
     <>
       <RoleRedirect />
-      <Navbar
-        totalItems={totalItems}
-        onCartClick={() => setCartOpen(true)}
-        totalWishlist={wishlist.length}
-        onWishlistClick={() => setWishlistOpen(true)}
-        search={search}
-        setSearch={setSearch}
-        onAuthClick={() => setAuthOpen(true)}
-        onProfileClick={() => setProfileOpen(true)}
-      />
+      {user?.role !== 'Admin' && (
+        <Navbar
+          totalItems={totalItems}
+          onCartClick={() => setCartOpen(true)}
+          totalWishlist={wishlist.length}
+          onWishlistClick={() => setWishlistOpen(true)}
+          search={search}
+          setSearch={setSearch}
+          onAuthClick={() => setAuthOpen(true)}
+          onProfileClick={() => setProfileOpen(true)}
+        />
+      )}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/products" element={

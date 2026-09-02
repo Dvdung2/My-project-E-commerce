@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
-import { getProductById, getReviews, submitReview, getRelated, getProductsByIds } from '../services/api'
-import { useAuth } from '../context/AuthContext'
+import { getProductById, getReviews, submitReview, getRelated, getProductsByIds } from '@/shared/services/api'
+import { useAuth } from '@/shared/context/AuthContext'
 
 const RECENT_KEY = 'shopvn_recent'
 
