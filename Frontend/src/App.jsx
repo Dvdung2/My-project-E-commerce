@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
+import * as signalR from '@microsoft/signalr'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { I18nProvider } from './context/I18nContext'
 import {
@@ -19,6 +20,9 @@ import ProfileModal from './components/ProfileModal'
 import Toast from './components/Toast'
 
 const WISHLIST_KEY = 'shopvn_wishlist'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const HUB_URL = API_BASE.replace(/\/api$/, '') + '/hubs/orders'
+const STATUS_LABELS = ['Chờ xử lý', 'Đang xử lý', 'Đang giao', 'Đã giao', 'Đã hủy']
 
 // Normalize a server cart item to the shape the UI uses.
 const normCart = (c) => ({ id: c.productId, name: c.name, price: c.price, imageUrl: c.imageUrl, stock: c.stock, qty: c.quantity })
@@ -59,6 +63,27 @@ function AppContent() {
   useEffect(() => {
     if (!isCustomer) localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist))
   }, [wishlist, isCustomer])
+
+  // Realtime order notifications via SignalR while logged in.
+  useEffect(() => {
+    if (!user) return
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const conn = new signalR.HubConnectionBuilder()
+      .withUrl(HUB_URL, { accessTokenFactory: () => localStorage.getItem('token') })
+      .withAutomaticReconnect()
+      .build()
+
+    conn.on('orderStatusChanged', p => {
+      showToast(`Đơn #${p.id}: ${STATUS_LABELS[p.statusValue] || p.status}`)
+    })
+    conn.on('orderCreated', p => {
+      showToast(`Đơn hàng mới #${p.id} · $${p.totalAmount?.toFixed?.(2) ?? p.totalAmount}`)
+    })
+    conn.start().catch(err => console.error('SignalR:', err))
+
+    return () => { conn.stop().catch(() => {}) }
+  }, [user?.id])
 
   // Load server cart & wishlist on customer login; clear cart on logout.
   useEffect(() => {

@@ -1,7 +1,9 @@
 using E_CommerceAPI.Data;
+using E_CommerceAPI.Hubs;
 using E_CommerceAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
@@ -43,13 +45,15 @@ namespace E_CommerceAPI.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<OrderHub> _hub;
 
         public const decimal FreeShippingThreshold = 100m;
         public const decimal FlatShippingFee = 5m;
 
-        public OrdersController(AppDbContext context)
+        public OrdersController(AppDbContext context, IHubContext<OrderHub> hub)
         {
             _context = context;
+            _hub = hub;
         }
 
         // GET: api/orders
@@ -159,6 +163,11 @@ namespace E_CommerceAPI.Controllers
                 .AsNoTracking()
                 .FirstAsync(o => o.Id == order.Id);
 
+            await _hub.Clients.Group(OrderHub.StaffGroup).SendAsync("orderCreated", new
+            {
+                order.Id, order.CustomerName, order.TotalAmount, order.CreatedAt
+            });
+
             return CreatedAtAction(nameof(GetById), new { id = order.Id }, created);
         }
 
@@ -183,6 +192,9 @@ namespace E_CommerceAPI.Controllers
                     ChangedAt = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
+
+                await _hub.Clients.Group(OrderHub.CustomerGroup(order.CustomerEmail))
+                    .SendAsync("orderStatusChanged", new { order.Id, status = order.Status.ToString(), statusValue = (int)order.Status });
             }
             return Ok(order);
         }
