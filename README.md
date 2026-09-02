@@ -33,18 +33,38 @@ Swagger is available in development:
 
 - `http://localhost:5000/swagger`
 
+## Configuration & Secrets
+
+No secrets are committed to this repository. Configuration is supplied at
+runtime via environment variables (Docker) or user secrets (local dev).
+
+1. Copy the example file and fill in real values:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+2. Set at least these variables in `.env` (see `.env.example` for details):
+
+   ```text
+   SA_PASSWORD            # SQL Server SA password
+   JWT_KEY                # random secret, >= 32 chars
+   SEED_ADMIN_EMAIL       # initial admin email
+   SEED_ADMIN_PASSWORD    # initial admin password
+   ```
+
+`.env` is gitignored. The backend fails fast at startup if the connection
+string or JWT key is missing or too weak.
+
 ## Default Admin Account
 
-The admin account is seeded when the backend starts and no admin exists:
-
-```text
-Email: admin@shopvn.local
-Password: Admin123!
-```
+An admin account is seeded once at startup (if no admin exists) using the
+`SEED_ADMIN_*` values you configure. Public registration always creates a
+**Customer** — it never grants admin rights.
 
 ## Run With Docker
 
-From the project root:
+From the project root (after creating `.env`):
 
 ```powershell
 docker compose up --build
@@ -70,9 +90,18 @@ docker compose up sqlserver
 
 ### 2. Start Backend
 
+Provide the connection string, JWT key and seed-admin values via
+[user secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets)
+(recommended for local dev) or environment variables, for example:
+
 ```powershell
-cd Backend\E_CommerceAPI
-dotnet run --project E_CommerceAPI\E_CommerceAPI.csproj
+cd Backend\E_CommerceAPI\E_CommerceAPI
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Database=EcommerceDb;User Id=sa;Password=<your-sa-password>;TrustServerCertificate=True;"
+dotnet user-secrets set "Jwt:Key" "<random-secret-at-least-32-chars>"
+dotnet user-secrets set "SeedAdmin:Email" "admin@example.com"
+dotnet user-secrets set "SeedAdmin:Password" "<admin-password>"
+dotnet run --project E_CommerceAPI.csproj
 ```
 
 The backend listens on the configured ASP.NET Core ports. The frontend expects the API at `http://localhost:5000/api` unless `VITE_API_URL` is set.
@@ -114,14 +143,23 @@ Frontend API URL can be overridden with:
 VITE_API_URL=http://localhost:5000/api
 ```
 
-Backend connection string and seed admin settings can be overridden with ASP.NET Core configuration or Docker environment variables:
+Backend secrets and settings are supplied with ASP.NET Core configuration
+(user secrets) or Docker environment variables:
 
 ```text
 ConnectionStrings__DefaultConnection
+Jwt__Key
 SeedAdmin__Email
 SeedAdmin__Password
 SeedAdmin__FullName
 ```
+
+## Authorization Notes
+
+- `POST /api/orders` requires an authenticated **Customer**. The customer
+  name and email are taken from the JWT, not the request body.
+- Admin-only endpoints (product/category/user/order management) require the
+  `Admin` role.
 
 ## Project Structure
 
