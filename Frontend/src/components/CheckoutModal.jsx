@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { createOrder, validateCoupon } from '../services/api'
+import { createOrder, validateCoupon, getAddresses } from '../services/api'
 import { useAuth } from '../context/AuthContext'
+
+const FREE_SHIP_THRESHOLD = 100
+const FLAT_SHIP = 5
 
 export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess }) {
   const { user } = useAuth()
@@ -13,9 +16,15 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
   const [couponInput, setCouponInput] = useState('')
   const [coupon, setCoupon] = useState(null) // { code, discountAmount }
   const [couponMsg, setCouponMsg] = useState(null)
+  const [addresses, setAddresses] = useState([])
 
   useEffect(() => {
     if (user?.address) setShippingAddress(prev => prev || user.address)
+    getAddresses().then(r => {
+      setAddresses(r.data)
+      const def = r.data.find(a => a.isDefault) || r.data[0]
+      if (def) setShippingAddress(prev => prev || `${def.recipient}, ${def.phone}, ${def.line}${def.city ? ', ' + def.city : ''}`)
+    }).catch(() => {})
   }, [user])
 
   const applyCoupon = async () => {
@@ -32,7 +41,9 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
   }
 
   const discount = coupon?.discountAmount || 0
-  const payable = Math.max(0, totalAmount - discount)
+  const discountedSubtotal = Math.max(0, totalAmount - discount)
+  const shippingFee = discountedSubtotal >= FREE_SHIP_THRESHOLD ? 0 : FLAT_SHIP
+  const payable = discountedSubtotal + shippingFee
 
   const submit = async e => {
     e.preventDefault()
@@ -77,6 +88,20 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
                 <label className="form-label">Email</label>
                 <input className="form-input" type="email" value={user?.email || ''} disabled readOnly />
               </div>
+              {addresses.length > 0 && (
+                <div className="form-group">
+                  <label className="form-label">Chọn từ sổ địa chỉ</label>
+                  <select className="form-input" onChange={e => {
+                    const a = addresses.find(x => x.id === Number(e.target.value))
+                    if (a) setShippingAddress(`${a.recipient}, ${a.phone}, ${a.line}${a.city ? ', ' + a.city : ''}`)
+                  }}>
+                    <option value="">— Nhập thủ công —</option>
+                    {addresses.map(a => (
+                      <option key={a.id} value={a.id}>{a.recipient} · {a.line}{a.isDefault ? ' (mặc định)' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">Địa chỉ giao hàng</label>
                 <input className="form-input" name="shippingAddress" value={shippingAddress}
@@ -116,6 +141,10 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
                     <span>-${discount.toFixed(2)}</span>
                   </div>
                 )}
+                <div className="order-sum-row">
+                  <span>Phí vận chuyển</span>
+                  <span>{shippingFee === 0 ? 'Miễn phí' : `$${shippingFee.toFixed(2)}`}</span>
+                </div>
                 <div className="order-sum-total">
                   <span>Tổng cộng</span>
                   <span>${payable.toFixed(2)}</span>

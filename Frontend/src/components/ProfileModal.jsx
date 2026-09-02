@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { updateProfile, getMyOrders, cancelOrder, changePassword } from '../services/api'
+import { updateProfile, getMyOrders, cancelOrder, changePassword,
+  getAddresses, createAddress, deleteAddress, setDefaultAddress } from '../services/api'
 
 const STATUS_LABEL = {
   0: 'Chờ xử lý', 1: 'Đang xử lý', 2: 'Đang giao', 3: 'Đã giao', 4: 'Đã hủy'
@@ -16,6 +17,17 @@ export default function ProfileModal({ onClose }) {
   const [msg, setMsg] = useState(null)
   const [pwd, setPwd] = useState({ currentPassword: '', newPassword: '' })
   const [pwdMsg, setPwdMsg] = useState(null)
+  const [addresses, setAddresses] = useState([])
+  const [addrForm, setAddrForm] = useState({ recipient: '', phone: '', line: '', city: '' })
+
+  const loadAddresses = () => getAddresses().then(r => setAddresses(r.data)).catch(console.error)
+  useEffect(() => { if (tab === 'addresses') loadAddresses() }, [tab])
+
+  const addAddress = async e => {
+    e.preventDefault()
+    try { await createAddress(addrForm); setAddrForm({ recipient: '', phone: '', line: '', city: '' }); loadAddresses() }
+    catch (err) { alert(err.response?.data || 'Không lưu được địa chỉ') }
+  }
 
   const set = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
@@ -79,7 +91,7 @@ export default function ProfileModal({ onClose }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
-          {['info', 'orders', 'password'].map(t => (
+          {['info', 'orders', 'addresses', 'password'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '.75rem', background: 'none', border: 'none',
               borderBottom: tab === t ? '1px solid var(--text)' : '1px solid transparent',
@@ -88,7 +100,7 @@ export default function ProfileModal({ onClose }) {
               cursor: 'pointer', fontFamily: 'Inter,sans-serif',
               transition: 'var(--t)', marginBottom: '-1px'
             }}>
-              {t === 'info' ? 'Thông tin cá nhân' : t === 'orders' ? 'Đơn hàng của tôi' : 'Đổi mật khẩu'}
+              {t === 'info' ? 'Thông tin cá nhân' : t === 'orders' ? 'Đơn hàng' : t === 'addresses' ? 'Địa chỉ' : 'Mật khẩu'}
             </button>
           ))}
         </div>
@@ -182,6 +194,33 @@ export default function ProfileModal({ onClose }) {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Addresses Tab */}
+        {tab === 'addresses' && (
+          <div className="modal-body" style={{ maxHeight: '440px', overflowY: 'auto' }}>
+            {addresses.map(a => (
+              <div key={a.id} style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--r2)', padding: '.8rem', marginBottom: '.6rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '.82rem', color: 'var(--white)' }}>
+                    {a.recipient} · {a.phone} {a.isDefault && <span style={{ color: '#4ade80', fontSize: '.7rem' }}>(mặc định)</span>}
+                  </strong>
+                  <div style={{ display: 'flex', gap: '.4rem' }}>
+                    {!a.isDefault && <button onClick={() => setDefaultAddress(a.id).then(loadAddresses)} style={{ background: 'none', border: '1px solid var(--line)', color: 'var(--text3)', borderRadius: 'var(--r3)', fontSize: '.68rem', padding: '.2rem .5rem', cursor: 'pointer' }}>Đặt mặc định</button>}
+                    <button onClick={() => deleteAddress(a.id).then(loadAddresses)} style={{ background: 'none', border: '1px solid rgba(239,68,68,.35)', color: '#ef4444', borderRadius: 'var(--r3)', fontSize: '.68rem', padding: '.2rem .5rem', cursor: 'pointer' }}>Xóa</button>
+                  </div>
+                </div>
+                <div style={{ fontSize: '.76rem', color: 'var(--text3)', marginTop: '.3rem' }}>{a.line}{a.city ? `, ${a.city}` : ''}</div>
+              </div>
+            ))}
+            <form onSubmit={addAddress} style={{ marginTop: '.8rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem' }}>
+              <input className="form-input" placeholder="Người nhận" required value={addrForm.recipient} onChange={e => setAddrForm(p => ({ ...p, recipient: e.target.value }))} />
+              <input className="form-input" placeholder="Số điện thoại" required value={addrForm.phone} onChange={e => setAddrForm(p => ({ ...p, phone: e.target.value }))} />
+              <input className="form-input" style={{ gridColumn: '1/-1' }} placeholder="Địa chỉ" required value={addrForm.line} onChange={e => setAddrForm(p => ({ ...p, line: e.target.value }))} />
+              <input className="form-input" placeholder="Thành phố" value={addrForm.city} onChange={e => setAddrForm(p => ({ ...p, city: e.target.value }))} />
+              <button type="submit" className="btn-primary">Thêm địa chỉ</button>
+            </form>
           </div>
         )}
 

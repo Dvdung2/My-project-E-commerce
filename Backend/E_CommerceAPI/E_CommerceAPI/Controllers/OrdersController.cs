@@ -44,6 +44,9 @@ namespace E_CommerceAPI.Controllers
     {
         private readonly AppDbContext _context;
 
+        public const decimal FreeShippingThreshold = 100m;
+        public const decimal FlatShippingFee = 5m;
+
         public OrdersController(AppDbContext context)
         {
             _context = context;
@@ -138,8 +141,13 @@ namespace E_CommerceAPI.Controllers
                 order.CouponCode = valid.Code;
             }
 
+            // Flat shipping fee, free over the threshold (based on discounted subtotal).
+            var discountedSubtotal = total - discount;
+            var shippingFee = discountedSubtotal >= FreeShippingThreshold ? 0m : FlatShippingFee;
+
             order.DiscountAmount = discount;
-            order.TotalAmount = total - discount;
+            order.ShippingFee = shippingFee;
+            order.TotalAmount = discountedSubtotal + shippingFee;
             order.StatusHistory.Add(new OrderStatusHistory { Status = OrderStatus.Pending, ChangedAt = DateTime.UtcNow });
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
