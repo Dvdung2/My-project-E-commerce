@@ -1,7 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getProductById, getReviews, submitReview } from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { getProductById, getReviews, submitReview, getRelated, getProductsByIds } from '../services/api'
 import { useAuth } from '../context/AuthContext'
+
+const RECENT_KEY = 'shopvn_recent'
+
+function MiniGrid({ title, items, onOpen }) {
+  if (!items || items.length === 0) return null
+  return (
+    <div style={{ marginTop: '2.5rem' }}>
+      <h2 className="section-title" style={{ fontSize: '1.4rem', marginBottom: '1rem' }}>{title}</h2>
+      <div className="mini-grid">
+        {items.map(p => (
+          <div key={p.id} className="mini-card" onClick={() => onOpen(p.id)}>
+            <img className="mini-img" src={p.imageUrl || 'https://via.placeholder.com/200'} alt={p.name}
+              onError={e => { e.target.src = 'https://via.placeholder.com/200?text=No+Image' }} />
+            <div className="mini-name">{p.name}</div>
+            <div className="mini-price">${p.price.toFixed(2)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function Stars({ value, size = '1rem', onSelect }) {
   return (
@@ -92,9 +114,12 @@ function ReviewsSection({ productId }) {
 
 export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishlist }) {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [qty, setQty] = useState(1)
+  const [related, setRelated] = useState([])
+  const [recent, setRecent] = useState([])
 
   useEffect(() => {
     setLoading(true)
@@ -102,6 +127,21 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
       .then(res => setProduct(res.data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false))
+    getRelated(id).then(r => setRelated(r.data)).catch(() => {})
+  }, [id])
+
+  // Track & load recently-viewed (client-side history, excluding current).
+  useEffect(() => {
+    let ids = []
+    try { ids = JSON.parse(localStorage.getItem(RECENT_KEY)) || [] } catch { ids = [] }
+    const others = ids.filter(x => x !== Number(id))
+    if (others.length > 0) {
+      getProductsByIds(others.slice(0, 8)).then(r => setRecent(r.data)).catch(() => {})
+    } else {
+      setRecent([])
+    }
+    const next = [Number(id), ...others].slice(0, 8)
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* ignore */ }
   }, [id])
 
   if (loading) return (
@@ -232,6 +272,9 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
           </div>
         </div>
       </div>
+
+      <MiniGrid title="Sản phẩm liên quan" items={related} onOpen={pid => navigate(`/product/${pid}`)} />
+      <MiniGrid title="Đã xem gần đây" items={recent} onOpen={pid => navigate(`/product/${pid}`)} />
 
       <ReviewsSection productId={product.id} />
     </div>

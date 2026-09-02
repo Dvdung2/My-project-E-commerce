@@ -661,3 +661,11 @@ button.admin-table-row:hover { background:var(--bg3); color:var(--white); }
 .rev-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px; }
 .rev-bar { width:100%; min-height:2px; background:linear-gradient(180deg,var(--white),var(--text2)); border-radius:3px 3px 0 0; transition:height .3s; }
 .rev-label { font-size:.6rem; color:var(--text3); transform:rotate(-45deg); white-space:nowrap; }
+
+/* ── Mini product grids (related / recently viewed) ─────────── */
+.mini-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:1rem; }
+.mini-card { background:var(--bg1); border:1px solid var(--line); border-radius:var(--r2); padding:.7rem; cursor:pointer; transition:border-color .15s; }
+.mini-card:hover { border-color:var(--line2); }
+.mini-img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; margin-bottom:.5rem; }
+.mini-name { font-size:.8rem; color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mini-price { font-size:.82rem; color:var(--white); font-weight:700; margin-top:.2rem; }

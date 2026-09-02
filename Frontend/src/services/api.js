@@ -14,6 +14,8 @@ api.interceptors.request.use(config => {
 
 export const getProducts = (params) => api.get('/products', { params })
 export const getProductById = (id) => api.get(`/products/${id}`)
+export const getRelated = (id) => api.get(`/products/${id}/related`)
+export const getProductsByIds = (ids) => api.get('/products/by-ids', { params: { ids: ids.join(',') } })
 export const getCategories = () => api.get('/categories')
 export const createCategory = (data) => api.post('/categories', data)
 export const updateCategory = (id, data) => api.put(`/categories/${id}`, data)

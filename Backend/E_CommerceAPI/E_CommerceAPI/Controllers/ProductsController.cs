@@ -118,6 +118,51 @@ namespace E_CommerceAPI.Controllers
             });
         }
 
+        // GET: api/products/5/related  -> same category, excluding self
+        [HttpGet("{id}/related")]
+        public async Task<IActionResult> Related(int id)
+        {
+            var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+            if (product == null) return NotFound();
+
+            var related = await _context.Products
+                .Where(p => p.CategoryId == product.CategoryId && p.Id != id && !p.IsDeleted)
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(4)
+                .ToListAsync();
+
+            return Ok(related);
+        }
+
+        // GET: api/products/by-ids?ids=1,2,3  -> for recently-viewed
+        [HttpGet("by-ids")]
+        public async Task<IActionResult> ByIds([FromQuery] string ids)
+        {
+            var idList = (ids ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var n) ? n : 0)
+                .Where(n => n > 0)
+                .Distinct()
+                .Take(20)
+                .ToList();
+
+            var products = await _context.Products
+                .Where(p => idList.Contains(p.Id) && !p.IsDeleted)
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Preserve the requested order.
+            var ordered = idList
+                .Select(i => products.FirstOrDefault(p => p.Id == i))
+                .Where(p => p != null)
+                .ToList();
+
+            return Ok(ordered);
+        }
+
         // POST: api/products
         [HttpPost]
         [Authorize(Roles = "Admin")]
