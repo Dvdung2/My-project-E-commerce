@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@/shared/context/AuthContext'
 import {
   createCategory,
   createProduct,
@@ -17,7 +17,7 @@ import {
   updateOrderStatus,
   updateProduct,
   updateUserRole
-} from '../services/api'
+} from '@/shared/services/api'
 
 const EMPTY_PRODUCT = {
   name: '',
@@ -64,7 +64,7 @@ function RevenueChart({ data }) {
 }
 
 export default function AdminDashboardPage({ onChanged }) {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, logout } = useAuth()
   const [tab, setTab] = useState('overview')
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -337,6 +337,9 @@ export default function AdminDashboardPage({ onChanged }) {
             </button>
           ))}
         </nav>
+        <button className="admin-logout" onClick={logout} style={{ marginTop: 'auto' }}>
+          Đăng xuất
+        </button>
       </aside>
 
       <section className="admin-main">

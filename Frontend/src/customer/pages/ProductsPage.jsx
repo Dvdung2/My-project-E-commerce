@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getProducts, getCategories } from '../services/api'
+import { getProducts, getCategories } from '@/shared/services/api'
 
 function Skeleton() {
   return (

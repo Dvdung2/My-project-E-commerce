@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useI18n } from '../context/I18nContext'
+import { useAuth } from '@/shared/context/AuthContext'
+import { useI18n } from '@/shared/context/I18nContext'
 
 function LangToggle() {
   const { lang, setLang } = useI18n()
