@@ -17,6 +17,7 @@ namespace E_CommerceAPI.Data
         public DbSet<WishlistItem> WishlistItems { get; set; }
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -12,6 +12,35 @@ api.interceptors.request.use(config => {
   return config
 })
 
+// On a 401, try once to refresh the access token with the refresh token,
+// then replay the original request.
+let refreshing = null
+api.interceptors.response.use(
+  res => res,
+  async error => {
+    const original = error.config
+    const refreshToken = localStorage.getItem('refreshToken')
+    const isAuthCall = original?.url?.includes('/auth/refresh') || original?.url?.includes('/auth/login')
+    if (error.response?.status === 401 && refreshToken && !original._retry && !isAuthCall) {
+      original._retry = true
+      try {
+        refreshing = refreshing || axios.post(`${api.defaults.baseURL}/auth/refresh`, { refreshToken })
+        const { data } = await refreshing
+        refreshing = null
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('refreshToken', data.refreshToken)
+        original.headers.Authorization = `Bearer ${data.token}`
+        return api(original)
+      } catch (e) {
+        refreshing = null
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export const getProducts = (params) => api.get('/products', { params })
 export const getProductById = (id) => api.get(`/products/${id}`)
 export const getRelated = (id) => api.get(`/products/${id}/related`)
@@ -38,6 +67,8 @@ export const getWishlistApi = () => api.get('/wishlist')
 export const toggleWishlistApi = (productId) => api.post(`/wishlist/${productId}`)
 export const removeWishlistApi = (productId) => api.delete(`/wishlist/${productId}`)
 
+export const refreshTokenApi = (refreshToken) => api.post('/auth/refresh', { refreshToken })
+export const logoutApi = (refreshToken) => api.post('/auth/logout', { refreshToken })
 export const validateCoupon = (code, subtotal) => api.get('/coupons/validate', { params: { code, subtotal } })
 export const getCoupons = () => api.get('/coupons')
 export const createCoupon = (data) => api.post('/coupons', data)

@@ -100,7 +100,8 @@ namespace E_CommerceAPI.Controllers
             await _context.SaveChangesAsync();
 
             var token = GenerateToken(user);
-            return Ok(new { token, user = ToUserDto(user) });
+            var refreshToken = await IssueRefreshToken(user);
+            return Ok(new { token, refreshToken, user = ToUserDto(user) });
         }
 
         // POST: api/auth/login
@@ -114,7 +115,55 @@ namespace E_CommerceAPI.Controllers
                 return Unauthorized("Email hoặc mật khẩu không đúng.");
 
             var token = GenerateToken(user);
-            return Ok(new { token, user = ToUserDto(user) });
+            var refreshToken = await IssueRefreshToken(user);
+            return Ok(new { token, refreshToken, user = ToUserDto(user) });
+        }
+
+        public class RefreshDto { public string RefreshToken { get; set; } = string.Empty; }
+
+        // POST: api/auth/refresh  -> rotate refresh token, issue new access token
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshDto dto)
+        {
+            var stored = await _context.RefreshTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Token == dto.RefreshToken);
+
+            if (stored == null || !stored.IsActive || stored.User == null)
+                return Unauthorized("Phiên đăng nhập đã hết hạn.");
+
+            // Rotate: revoke the used token, issue a fresh pair.
+            stored.Revoked = true;
+            var token = GenerateToken(stored.User);
+            var refreshToken = await IssueRefreshToken(stored.User);
+            return Ok(new { token, refreshToken, user = ToUserDto(stored.User) });
+        }
+
+        // POST: api/auth/logout  -> revoke refresh token
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RefreshDto dto)
+        {
+            var stored = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == dto.RefreshToken);
+            if (stored != null && !stored.Revoked)
+            {
+                stored.Revoked = true;
+                await _context.SaveChangesAsync();
+            }
+            return Ok(new { message = "Đã đăng xuất." });
+        }
+
+        private async Task<string> IssueRefreshToken(User user)
+        {
+            var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48));
+            _context.RefreshTokens.Add(new RefreshToken
+            {
+                UserId = user.Id,
+                Token = token,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+            return token;
         }
 
         // GET: api/auth/me
