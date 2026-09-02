@@ -13,6 +13,8 @@ namespace E_CommerceAPI.Data
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
+        public DbSet<WishlistItem> WishlistItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,6 +29,14 @@ namespace E_CommerceAPI.Data
             // One review per user per product.
             modelBuilder.Entity<Review>()
                 .HasIndex(r => new { r.ProductId, r.UserId })
+                .IsUnique();
+
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(c => new { c.UserId, c.ProductId })
+                .IsUnique();
+
+            modelBuilder.Entity<WishlistItem>()
+                .HasIndex(w => new { w.UserId, w.ProductId })
                 .IsUnique();
 
             // Seed Categories
