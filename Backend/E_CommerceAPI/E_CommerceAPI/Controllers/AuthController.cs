@@ -38,6 +38,15 @@ namespace E_CommerceAPI.Controllers
         public string Password { get; set; } = string.Empty;
     }
 
+    public class ChangePasswordDto
+    {
+        [Required]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required, MinLength(6)]
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
     public class UpdateProfileDto
     {
         [Required, MaxLength(100)]
@@ -65,6 +74,7 @@ namespace E_CommerceAPI.Controllers
 
         // POST: api/auth/register
         [HttpPost("register")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             var email = dto.Email.Trim().ToLowerInvariant();
@@ -90,11 +100,13 @@ namespace E_CommerceAPI.Controllers
             await _context.SaveChangesAsync();
 
             var token = GenerateToken(user);
-            return Ok(new { token, user = ToUserDto(user) });
+            var refreshToken = await IssueRefreshToken(user);
+            return Ok(new { token, refreshToken, user = ToUserDto(user) });
         }
 
         // POST: api/auth/login
         [HttpPost("login")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var email = dto.Email.Trim().ToLowerInvariant();
@@ -103,7 +115,55 @@ namespace E_CommerceAPI.Controllers
                 return Unauthorized("Email hoặc mật khẩu không đúng.");
 
             var token = GenerateToken(user);
-            return Ok(new { token, user = ToUserDto(user) });
+            var refreshToken = await IssueRefreshToken(user);
+            return Ok(new { token, refreshToken, user = ToUserDto(user) });
+        }
+
+        public class RefreshDto { public string RefreshToken { get; set; } = string.Empty; }
+
+        // POST: api/auth/refresh  -> rotate refresh token, issue new access token
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshDto dto)
+        {
+            var stored = await _context.RefreshTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Token == dto.RefreshToken);
+
+            if (stored == null || !stored.IsActive || stored.User == null)
+                return Unauthorized("Phiên đăng nhập đã hết hạn.");
+
+            // Rotate: revoke the used token, issue a fresh pair.
+            stored.Revoked = true;
+            var token = GenerateToken(stored.User);
+            var refreshToken = await IssueRefreshToken(stored.User);
+            return Ok(new { token, refreshToken, user = ToUserDto(stored.User) });
+        }
+
+        // POST: api/auth/logout  -> revoke refresh token
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RefreshDto dto)
+        {
+            var stored = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == dto.RefreshToken);
+            if (stored != null && !stored.Revoked)
+            {
+                stored.Revoked = true;
+                await _context.SaveChangesAsync();
+            }
+            return Ok(new { message = "Đã đăng xuất." });
+        }
+
+        private async Task<string> IssueRefreshToken(User user)
+        {
+            var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48));
+            _context.RefreshTokens.Add(new RefreshToken
+            {
+                UserId = user.Id,
+                Token = token,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+            return token;
         }
 
         // GET: api/auth/me
@@ -142,10 +202,28 @@ namespace E_CommerceAPI.Controllers
             var orders = await _context.Orders
                 .Where(o => o.CustomerEmail == email)
                 .Include(o => o.OrderItems).ThenInclude(i => i.Product)
+                .Include(o => o.StatusHistory)
                 .AsNoTracking()
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
             return Ok(orders);
+        }
+
+        // POST: api/auth/change-password
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+                return BadRequest("Mật khẩu hiện tại không đúng.");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Đổi mật khẩu thành công." });
         }
 
         private string GenerateToken(User user)

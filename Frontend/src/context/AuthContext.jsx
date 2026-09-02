@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { getMe } from '../services/api'
+import { getMe, logoutApi } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -19,13 +19,17 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const loginUser = (token, userData) => {
+  const loginUser = (token, userData, refreshToken) => {
     localStorage.setItem('token', token)
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
     setUser(userData)
   }
 
   const logout = () => {
+    const refreshToken = localStorage.getItem('refreshToken')
+    if (refreshToken) logoutApi(refreshToken).catch(() => {})
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     setUser(null)
   }
 

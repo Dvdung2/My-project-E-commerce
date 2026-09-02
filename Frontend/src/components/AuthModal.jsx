@@ -20,7 +20,7 @@ export default function AuthModal({ mode: initialMode, onClose }) {
         ? { email: form.email, password: form.password }
         : { fullName: form.fullName, email: form.email, password: form.password, phone: form.phone, address: form.address }
       const res = await fn(payload)
-      loginUser(res.data.token, res.data.user)
+      loginUser(res.data.token, res.data.user, res.data.refreshToken)
       onClose()
     } catch (err) {
       setError(err.response?.data || 'Đã có lỗi xảy ra.')

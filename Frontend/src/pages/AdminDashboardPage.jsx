@@ -7,6 +7,8 @@ import {
   deleteCategory,
   deleteProduct,
   deleteUser,
+  getAnalytics,
+  uploadImage,
   getCategories,
   getOrders,
   getProducts,
@@ -47,6 +49,20 @@ function money(value) {
   return `$${Number(value || 0).toFixed(2)}`
 }
 
+function RevenueChart({ data }) {
+  const max = Math.max(1, ...data.map(d => d.revenue))
+  return (
+    <div className="rev-chart">
+      {data.map(d => (
+        <div className="rev-bar-wrap" key={d.date} title={`${d.date}: ${money(d.revenue)} (${d.orders} đơn)`}>
+          <div className="rev-bar" style={{ height: `${(d.revenue / max) * 100}%` }} />
+          <span className="rev-label">{d.date.slice(5)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function AdminDashboardPage({ onChanged }) {
   const { user, loading: authLoading } = useAuth()
   const [tab, setTab] = useState('overview')
@@ -54,6 +70,7 @@ export default function AdminDashboardPage({ onChanged }) {
   const [categories, setCategories] = useState([])
   const [orders, setOrders] = useState([])
   const [users, setUsers] = useState([])
+  const [analytics, setAnalytics] = useState(null)
   const [productId, setProductId] = useState(null)
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT)
   const [categoryId, setCategoryId] = useState(null)
@@ -101,11 +118,12 @@ export default function AdminDashboardPage({ onChanged }) {
     setLoading(true)
     setMessage(null)
     try {
-      const [p, c, o, u] = await Promise.all([getProducts(), getCategories(), getOrders(), getUsers()])
-      setProducts(p.data)
+      const [p, c, o, u, a] = await Promise.all([getProducts({ pageSize: 100 }), getCategories(), getOrders(), getUsers(), getAnalytics()])
+      setProducts(p.data.items)
       setCategories(c.data)
       setOrders(o.data)
       setUsers(u.data)
+      setAnalytics(a.data)
     } catch (err) {
       setMessage({ type: 'err', text: apiError(err) })
     } finally {
@@ -345,6 +363,24 @@ export default function AdminDashboardPage({ onChanged }) {
               ))}
             </div>
 
+            {analytics && (
+              <div className="admin-two-col">
+                <div className="admin-panel">
+                  <div className="admin-panel-head"><h2>Doanh thu 14 ngày</h2></div>
+                  <RevenueChart data={analytics.revenueByDay} />
+                </div>
+                <div className="admin-panel">
+                  <div className="admin-panel-head"><h2>Sản phẩm bán chạy</h2></div>
+                  {analytics.topProducts.length === 0 ? <p className="admin-muted">Chưa có dữ liệu.</p> : analytics.topProducts.map(t => (
+                    <div className="admin-list-row" key={t.productId}>
+                      <div><strong>{t.name}</strong><span>Đã bán {t.quantitySold}</span></div>
+                      <b>{money(t.revenue)}</b>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="admin-two-col">
               <div className="admin-panel">
                 <div className="admin-panel-head">
@@ -411,8 +447,15 @@ export default function AdminDashboardPage({ onChanged }) {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Ảnh URL</label>
-                  <input className="form-input" name="imageUrl" value={productForm.imageUrl} onChange={setProductField} />
+                  <label className="form-label">Ảnh (URL hoặc tải lên)</label>
+                  <input className="form-input" name="imageUrl" value={productForm.imageUrl} onChange={setProductField} placeholder="https://... hoặc tải lên ↓" />
+                  <input type="file" accept="image/*" style={{ marginTop: '.4rem', fontSize: '.75rem', color: 'var(--text3)' }}
+                    onChange={async e => {
+                      const f = e.target.files?.[0]; if (!f) return
+                      try { const res = await uploadImage(f); setProductForm(prev => ({ ...prev, imageUrl: res.data.url })) }
+                      catch { setMessage({ type: 'err', text: 'Tải ảnh thất bại.' }) }
+                    }} />
+                  {productForm.imageUrl && <img src={productForm.imageUrl} alt="" style={{ marginTop: '.5rem', width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />}
                 </div>
                 <div className="form-group wide">
                   <label className="form-label">Mô tả</label>

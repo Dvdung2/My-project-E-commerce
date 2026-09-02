@@ -12,6 +12,15 @@ namespace E_CommerceAPI.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<Review> Reviews { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
+        public DbSet<WishlistItem> WishlistItems { get; set; }
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+        public DbSet<Coupon> Coupons { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Address> Addresses { get; set; }
+        public DbSet<ProductImage> ProductImages { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,6 +30,23 @@ namespace E_CommerceAPI.Data
             // of the application-level check in AuthController.Register).
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
+                .IsUnique();
+
+            // One review per user per product.
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => new { r.ProductId, r.UserId })
+                .IsUnique();
+
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(c => new { c.UserId, c.ProductId })
+                .IsUnique();
+
+            modelBuilder.Entity<WishlistItem>()
+                .HasIndex(w => new { w.UserId, w.ProductId })
+                .IsUnique();
+
+            modelBuilder.Entity<Coupon>()
+                .HasIndex(c => c.Code)
                 .IsUnique();
 
             // Seed Categories

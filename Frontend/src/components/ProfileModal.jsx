@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { updateProfile, getMyOrders } from '../services/api'
+import { updateProfile, getMyOrders, cancelOrder, changePassword, downloadInvoice,
+  getAddresses, createAddress, deleteAddress, setDefaultAddress } from '../services/api'
 
 const STATUS_LABEL = {
   0: 'Chờ xử lý', 1: 'Đang xử lý', 2: 'Đang giao', 3: 'Đã giao', 4: 'Đã hủy'
@@ -14,15 +15,56 @@ export default function ProfileModal({ onClose }) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [pwd, setPwd] = useState({ currentPassword: '', newPassword: '' })
+  const [pwdMsg, setPwdMsg] = useState(null)
+  const [addresses, setAddresses] = useState([])
+  const [addrForm, setAddrForm] = useState({ recipient: '', phone: '', line: '', city: '' })
+
+  const loadAddresses = () => getAddresses().then(r => setAddresses(r.data)).catch(console.error)
+  useEffect(() => { if (tab === 'addresses') loadAddresses() }, [tab])
+
+  const addAddress = async e => {
+    e.preventDefault()
+    try { await createAddress(addrForm); setAddrForm({ recipient: '', phone: '', line: '', city: '' }); loadAddresses() }
+    catch (err) { alert(err.response?.data || 'Không lưu được địa chỉ') }
+  }
 
   const set = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
+  const loadOrders = () => {
+    setLoading(true)
+    getMyOrders().then(r => setOrders(r.data)).catch(console.error).finally(() => setLoading(false))
+  }
+
   useEffect(() => {
-    if (tab === 'orders') {
-      setLoading(true)
-      getMyOrders().then(r => setOrders(r.data)).catch(console.error).finally(() => setLoading(false))
-    }
+    if (tab === 'orders') loadOrders()
   }, [tab])
+
+  const doCancel = async (id) => {
+    try { await cancelOrder(id); loadOrders() }
+    catch (err) { alert(err.response?.data || 'Không hủy được đơn') }
+  }
+
+  const doInvoice = async (id) => {
+    try {
+      const res = await downloadInvoice(id)
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url; a.download = `invoice-${id}.pdf`; a.click()
+      URL.revokeObjectURL(url)
+    } catch { alert('Không tải được hóa đơn') }
+  }
+
+  const savePassword = async e => {
+    e.preventDefault(); setPwdMsg(null)
+    try {
+      await changePassword(pwd)
+      setPwd({ currentPassword: '', newPassword: '' })
+      setPwdMsg({ type: 'ok', text: 'Đổi mật khẩu thành công.' })
+    } catch (err) {
+      setPwdMsg({ type: 'err', text: err.response?.data || 'Có lỗi xảy ra.' })
+    }
+  }
 
   const saveProfile = async e => {
     e.preventDefault(); setSaving(true); setMsg(null)
@@ -59,7 +101,7 @@ export default function ProfileModal({ onClose }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
-          {['info', 'orders'].map(t => (
+          {['info', 'orders', 'addresses', 'password'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '.75rem', background: 'none', border: 'none',
               borderBottom: tab === t ? '1px solid var(--text)' : '1px solid transparent',
@@ -68,7 +110,7 @@ export default function ProfileModal({ onClose }) {
               cursor: 'pointer', fontFamily: 'Inter,sans-serif',
               transition: 'var(--t)', marginBottom: '-1px'
             }}>
-              {t === 'info' ? 'Thông tin cá nhân' : 'Đơn hàng của tôi'}
+              {t === 'info' ? 'Thông tin cá nhân' : t === 'orders' ? 'Đơn hàng' : t === 'addresses' ? 'Địa chỉ' : 'Mật khẩu'}
             </button>
           ))}
         </div>
@@ -152,9 +194,73 @@ export default function ProfileModal({ onClose }) {
                   <span>Tổng</span>
                   <span>${order.totalAmount?.toFixed(2)}</span>
                 </div>
+                <div style={{ display: 'flex', gap: '.5rem', marginTop: '.6rem' }}>
+                  <button onClick={() => doInvoice(order.id)} style={{
+                    flex: 1, background: 'none', border: '1px solid var(--line)', color: 'var(--text2)',
+                    padding: '.4rem', borderRadius: 'var(--r3)', cursor: 'pointer',
+                    fontSize: '.75rem', fontFamily: 'Inter,sans-serif'
+                  }}>Tải hóa đơn PDF</button>
+                  {order.status === 0 && (
+                    <button onClick={() => doCancel(order.id)} style={{
+                      flex: 1, background: 'none', border: '1px solid rgba(239,68,68,.35)', color: '#ef4444',
+                      padding: '.4rem', borderRadius: 'var(--r3)', cursor: 'pointer',
+                      fontSize: '.75rem', fontFamily: 'Inter,sans-serif'
+                    }}>Hủy đơn hàng</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+        )}
+
+        {/* Addresses Tab */}
+        {tab === 'addresses' && (
+          <div className="modal-body" style={{ maxHeight: '440px', overflowY: 'auto' }}>
+            {addresses.map(a => (
+              <div key={a.id} style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--r2)', padding: '.8rem', marginBottom: '.6rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '.82rem', color: 'var(--white)' }}>
+                    {a.recipient} · {a.phone} {a.isDefault && <span style={{ color: '#4ade80', fontSize: '.7rem' }}>(mặc định)</span>}
+                  </strong>
+                  <div style={{ display: 'flex', gap: '.4rem' }}>
+                    {!a.isDefault && <button onClick={() => setDefaultAddress(a.id).then(loadAddresses)} style={{ background: 'none', border: '1px solid var(--line)', color: 'var(--text3)', borderRadius: 'var(--r3)', fontSize: '.68rem', padding: '.2rem .5rem', cursor: 'pointer' }}>Đặt mặc định</button>}
+                    <button onClick={() => deleteAddress(a.id).then(loadAddresses)} style={{ background: 'none', border: '1px solid rgba(239,68,68,.35)', color: '#ef4444', borderRadius: 'var(--r3)', fontSize: '.68rem', padding: '.2rem .5rem', cursor: 'pointer' }}>Xóa</button>
+                  </div>
+                </div>
+                <div style={{ fontSize: '.76rem', color: 'var(--text3)', marginTop: '.3rem' }}>{a.line}{a.city ? `, ${a.city}` : ''}</div>
+              </div>
+            ))}
+            <form onSubmit={addAddress} style={{ marginTop: '.8rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem' }}>
+              <input className="form-input" placeholder="Người nhận" required value={addrForm.recipient} onChange={e => setAddrForm(p => ({ ...p, recipient: e.target.value }))} />
+              <input className="form-input" placeholder="Số điện thoại" required value={addrForm.phone} onChange={e => setAddrForm(p => ({ ...p, phone: e.target.value }))} />
+              <input className="form-input" style={{ gridColumn: '1/-1' }} placeholder="Địa chỉ" required value={addrForm.line} onChange={e => setAddrForm(p => ({ ...p, line: e.target.value }))} />
+              <input className="form-input" placeholder="Thành phố" value={addrForm.city} onChange={e => setAddrForm(p => ({ ...p, city: e.target.value }))} />
+              <button type="submit" className="btn-primary">Thêm địa chỉ</button>
+            </form>
+          </div>
+        )}
+
+        {/* Password Tab */}
+        {tab === 'password' && (
+          <form onSubmit={savePassword}>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Mật khẩu hiện tại</label>
+                <input className="form-input" type="password" required
+                  value={pwd.currentPassword} onChange={e => setPwd(p => ({ ...p, currentPassword: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+                <input className="form-input" type="password" required minLength={6}
+                  value={pwd.newPassword} onChange={e => setPwd(p => ({ ...p, newPassword: e.target.value }))} />
+              </div>
+              {pwdMsg && <div className={pwdMsg.type === 'ok' ? 'ok-msg' : 'err-msg'}>{pwdMsg.text}</div>}
+            </div>
+            <div className="modal-foot">
+              <button type="button" className="btn-sec" onClick={onClose}>Đóng</button>
+              <button type="submit" className="btn-primary">Đổi mật khẩu</button>
+            </div>
+          </form>
         )}
       </div>
     </div>

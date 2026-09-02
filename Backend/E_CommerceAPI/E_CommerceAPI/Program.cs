@@ -1,14 +1,40 @@
 using E_CommerceAPI.Data;
+using E_CommerceAPI.Middleware;
 using E_CommerceAPI.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
+
+// QuestPDF community license (free for this use).
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Global exception handling -> consistent ProblemDetails + structured logs.
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+// Rate limiting: throttle auth endpoints to slow down brute-force attempts.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+});
+
 // Controllers + JSON options
-builder.Services.AddControllers()
+builder.Services.AddScoped<E_CommerceAPI.Middleware.AuditActionFilter>();
+builder.Services.AddControllers(options =>
+    {
+        options.Filters.AddService<E_CommerceAPI.Middleware.AuditActionFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -69,7 +95,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
+
+        // Allow SignalR (WebSockets) to authenticate via ?access_token= query.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+        };
     });
+
+builder.Services.AddSignalR();
 
 builder.Services.AddAuthorization();
 
@@ -80,7 +121,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials(); // required for SignalR
     });
 });
 
@@ -110,7 +152,16 @@ using (var scope = app.Services.CreateScope())
         });
         db.SaveChanges();
     }
+
+    // Seed a demo coupon once.
+    if (!db.Coupons.Any())
+    {
+        db.Coupons.Add(new Coupon { Code = "SAVE10", DiscountPercent = 10, MinOrderAmount = 50, IsActive = true, CreatedAt = DateTime.UtcNow });
+        db.SaveChanges();
+    }
 }
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -118,8 +169,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Serve uploaded images from wwwroot (created if missing so the provider resolves).
+var webRootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRootPath)
+});
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<E_CommerceAPI.Hubs.OrderHub>("/hubs/orders");
 app.Run();
