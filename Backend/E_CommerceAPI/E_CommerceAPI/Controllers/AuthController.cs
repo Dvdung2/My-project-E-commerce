@@ -72,7 +72,9 @@ namespace E_CommerceAPI.Controllers
             if (await _context.Users.AnyAsync(u => u.Email == email))
                 return BadRequest("Email đã được sử dụng.");
 
-            var isFirstUser = !await _context.Users.AnyAsync();
+            // Public registration always creates a Customer. Admin accounts are
+            // provisioned only through the seeded SeedAdmin configuration at
+            // startup, never granted based on who registers first.
             var user = new User
             {
                 FullName = dto.FullName.Trim(),
@@ -80,7 +82,7 @@ namespace E_CommerceAPI.Controllers
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 Phone = dto.Phone.Trim(),
                 Address = dto.Address.Trim(),
-                Role = isFirstUser ? "Admin" : "Customer",
+                Role = "Customer",
                 CreatedAt = DateTime.UtcNow
             };
 
