@@ -17,6 +17,12 @@ namespace E_CommerceAPI.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // Enforce unique email at the database level (defense in depth on top
+            // of the application-level check in AuthController.Register).
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
             // Seed Categories
             modelBuilder.Entity<Category>().HasData(
                 new Category { Id = 1, Name = "Electronics", ImageUrl = "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400" },
