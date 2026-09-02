@@ -41,6 +41,7 @@ export const changePassword = (data) => api.post('/auth/change-password', data)
 
 export const getReviews = (productId) => api.get(`/products/${productId}/reviews`)
 export const submitReview = (productId, data) => api.post(`/products/${productId}/reviews`, data)
+export const getAnalytics = () => api.get('/analytics/summary')
 export const getUsers = () => api.get('/users')
 export const updateUserRole = (id, role) => api.patch(`/users/${id}/role`, { role })
 export const deleteUser = (id) => api.delete(`/users/${id}`)
