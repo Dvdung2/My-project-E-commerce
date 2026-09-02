@@ -38,6 +38,15 @@ namespace E_CommerceAPI.Controllers
         public string Password { get; set; } = string.Empty;
     }
 
+    public class ChangePasswordDto
+    {
+        [Required]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required, MinLength(6)]
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
     public class UpdateProfileDto
     {
         [Required, MaxLength(100)]
@@ -144,10 +153,28 @@ namespace E_CommerceAPI.Controllers
             var orders = await _context.Orders
                 .Where(o => o.CustomerEmail == email)
                 .Include(o => o.OrderItems).ThenInclude(i => i.Product)
+                .Include(o => o.StatusHistory)
                 .AsNoTracking()
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
             return Ok(orders);
+        }
+
+        // POST: api/auth/change-password
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+                return BadRequest("Mật khẩu hiện tại không đúng.");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Đổi mật khẩu thành công." });
         }
 
         private string GenerateToken(User user)

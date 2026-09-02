@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { updateProfile, getMyOrders } from '../services/api'
+import { updateProfile, getMyOrders, cancelOrder, changePassword } from '../services/api'
 
 const STATUS_LABEL = {
   0: 'Chờ xử lý', 1: 'Đang xử lý', 2: 'Đang giao', 3: 'Đã giao', 4: 'Đã hủy'
@@ -14,15 +14,35 @@ export default function ProfileModal({ onClose }) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [pwd, setPwd] = useState({ currentPassword: '', newPassword: '' })
+  const [pwdMsg, setPwdMsg] = useState(null)
 
   const set = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
+  const loadOrders = () => {
+    setLoading(true)
+    getMyOrders().then(r => setOrders(r.data)).catch(console.error).finally(() => setLoading(false))
+  }
+
   useEffect(() => {
-    if (tab === 'orders') {
-      setLoading(true)
-      getMyOrders().then(r => setOrders(r.data)).catch(console.error).finally(() => setLoading(false))
-    }
+    if (tab === 'orders') loadOrders()
   }, [tab])
+
+  const doCancel = async (id) => {
+    try { await cancelOrder(id); loadOrders() }
+    catch (err) { alert(err.response?.data || 'Không hủy được đơn') }
+  }
+
+  const savePassword = async e => {
+    e.preventDefault(); setPwdMsg(null)
+    try {
+      await changePassword(pwd)
+      setPwd({ currentPassword: '', newPassword: '' })
+      setPwdMsg({ type: 'ok', text: 'Đổi mật khẩu thành công.' })
+    } catch (err) {
+      setPwdMsg({ type: 'err', text: err.response?.data || 'Có lỗi xảy ra.' })
+    }
+  }
 
   const saveProfile = async e => {
     e.preventDefault(); setSaving(true); setMsg(null)
@@ -59,7 +79,7 @@ export default function ProfileModal({ onClose }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
-          {['info', 'orders'].map(t => (
+          {['info', 'orders', 'password'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '.75rem', background: 'none', border: 'none',
               borderBottom: tab === t ? '1px solid var(--text)' : '1px solid transparent',
@@ -68,7 +88,7 @@ export default function ProfileModal({ onClose }) {
               cursor: 'pointer', fontFamily: 'Inter,sans-serif',
               transition: 'var(--t)', marginBottom: '-1px'
             }}>
-              {t === 'info' ? 'Thông tin cá nhân' : 'Đơn hàng của tôi'}
+              {t === 'info' ? 'Thông tin cá nhân' : t === 'orders' ? 'Đơn hàng của tôi' : 'Đổi mật khẩu'}
             </button>
           ))}
         </div>
@@ -152,9 +172,40 @@ export default function ProfileModal({ onClose }) {
                   <span>Tổng</span>
                   <span>${order.totalAmount?.toFixed(2)}</span>
                 </div>
+                {order.status === 0 && (
+                  <button onClick={() => doCancel(order.id)} style={{
+                    marginTop: '.6rem', width: '100%', background: 'none',
+                    border: '1px solid rgba(239,68,68,.35)', color: '#ef4444',
+                    padding: '.4rem', borderRadius: 'var(--r3)', cursor: 'pointer',
+                    fontSize: '.75rem', fontFamily: 'Inter,sans-serif'
+                  }}>Hủy đơn hàng</button>
+                )}
               </div>
             ))}
           </div>
+        )}
+
+        {/* Password Tab */}
+        {tab === 'password' && (
+          <form onSubmit={savePassword}>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Mật khẩu hiện tại</label>
+                <input className="form-input" type="password" required
+                  value={pwd.currentPassword} onChange={e => setPwd(p => ({ ...p, currentPassword: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+                <input className="form-input" type="password" required minLength={6}
+                  value={pwd.newPassword} onChange={e => setPwd(p => ({ ...p, newPassword: e.target.value }))} />
+              </div>
+              {pwdMsg && <div className={pwdMsg.type === 'ok' ? 'ok-msg' : 'err-msg'}>{pwdMsg.text}</div>}
+            </div>
+            <div className="modal-foot">
+              <button type="button" className="btn-sec" onClick={onClose}>Đóng</button>
+              <button type="submit" className="btn-primary">Đổi mật khẩu</button>
+            </div>
+          </form>
         )}
       </div>
     </div>

@@ -36,6 +36,9 @@ export const getWishlistApi = () => api.get('/wishlist')
 export const toggleWishlistApi = (productId) => api.post(`/wishlist/${productId}`)
 export const removeWishlistApi = (productId) => api.delete(`/wishlist/${productId}`)
 
+export const cancelOrder = (id) => api.post(`/orders/${id}/cancel`)
+export const changePassword = (data) => api.post('/auth/change-password', data)
+
 export const getReviews = (productId) => api.get(`/products/${productId}/reviews`)
 export const submitReview = (productId, data) => api.post(`/products/${productId}/reviews`, data)
 export const getUsers = () => api.get('/users')

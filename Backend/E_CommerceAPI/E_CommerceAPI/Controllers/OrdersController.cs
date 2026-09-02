@@ -122,6 +122,7 @@ namespace E_CommerceAPI.Controllers
             }
 
             order.TotalAmount = total;
+            order.StatusHistory.Add(new OrderStatusHistory { Status = OrderStatus.Pending, ChangedAt = DateTime.UtcNow });
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -146,9 +147,55 @@ namespace E_CommerceAPI.Controllers
             var order = await _context.Orders.FindAsync(id);
             if (order == null) return NotFound();
 
-            order.Status = dto.Status;
-            await _context.SaveChangesAsync();
+            if (order.Status != dto.Status)
+            {
+                order.Status = dto.Status;
+                _context.OrderStatusHistories.Add(new OrderStatusHistory
+                {
+                    OrderId = order.Id,
+                    Status = dto.Status,
+                    ChangedAt = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync();
+            }
             return Ok(order);
+        }
+
+        // POST: api/orders/5/cancel  -> customer cancels own pending order
+        [HttpPost("{id}/cancel")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email)!.Trim().ToLowerInvariant();
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == id);
+            if (order == null) return NotFound();
+            if (order.CustomerEmail != email) return Forbid();
+            if (order.Status != OrderStatus.Pending)
+                return BadRequest("Chỉ có thể hủy đơn hàng đang chờ xử lý.");
+
+            // Restore stock for each line.
+            foreach (var item in order.OrderItems)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null) product.Stock += item.Quantity;
+            }
+
+            order.Status = OrderStatus.Cancelled;
+            _context.OrderStatusHistories.Add(new OrderStatusHistory
+            {
+                OrderId = order.Id,
+                Status = OrderStatus.Cancelled,
+                ChangedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Ok(new { order.Id, order.Status });
         }
     }
 }
