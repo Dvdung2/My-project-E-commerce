@@ -49,6 +49,26 @@ function money(value) {
   return `$${Number(value || 0).toFixed(2)}`
 }
 
+const initials = (name) =>
+  (name || 'Admin').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase()
+
+const I = {
+  overview: <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />,
+  products: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" /></>,
+  categories: <><path d="M2 7h20M2 12h20M2 17h20" /></>,
+  orders: <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18M16 10a4 4 0 0 1-8 0" /></>,
+  users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
+}
+
+function NavIcon({ name }) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {I[name]}
+    </svg>
+  )
+}
+
 function RevenueChart({ data }) {
   const max = Math.max(1, ...data.map(d => d.revenue))
   return (
@@ -320,10 +340,14 @@ export default function AdminDashboardPage({ onChanged }) {
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
-        <div>
-          <div className="admin-brand">SHOPVN Admin</div>
-          <div className="admin-user">{user.email}</div>
+        <div className="admin-brand-row">
+          <div className="admin-logo">SV</div>
+          <div className="admin-brand-text">
+            <div className="admin-brand">SHOPVN</div>
+            <div className="admin-brand-sub">Bảng điều khiển</div>
+          </div>
         </div>
+
         <nav>
           {[
             ['overview', 'Tổng quan'],
@@ -333,13 +357,24 @@ export default function AdminDashboardPage({ onChanged }) {
             ['users', 'Người dùng']
           ].map(([id, label]) => (
             <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
-              {label}
+              <NavIcon name={id} />
+              <span>{label}</span>
             </button>
           ))}
         </nav>
-        <button className="admin-logout" onClick={logout} style={{ marginTop: 'auto' }}>
-          Đăng xuất
-        </button>
+
+        <div className="admin-side-foot">
+          <div className="admin-foot-avatar">{initials(user.fullName)}</div>
+          <div className="admin-foot-info">
+            <div className="admin-foot-name">{user.fullName || 'Admin'}</div>
+            <div className="admin-foot-role">{user.role}</div>
+          </div>
+          <button className="admin-foot-logout" onClick={logout} title="Đăng xuất" aria-label="Đăng xuất">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+          </button>
+        </div>
       </aside>
 
       <section className="admin-main">
