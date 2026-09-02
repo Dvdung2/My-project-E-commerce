@@ -38,6 +38,10 @@ export const getWishlistApi = () => api.get('/wishlist')
 export const toggleWishlistApi = (productId) => api.post(`/wishlist/${productId}`)
 export const removeWishlistApi = (productId) => api.delete(`/wishlist/${productId}`)
 
+export const validateCoupon = (code, subtotal) => api.get('/coupons/validate', { params: { code, subtotal } })
+export const getCoupons = () => api.get('/coupons')
+export const createCoupon = (data) => api.post('/coupons', data)
+export const deleteCoupon = (id) => api.delete(`/coupons/${id}`)
 export const cancelOrder = (id) => api.post(`/orders/${id}/cancel`)
 export const changePassword = (data) => api.post('/auth/change-password', data)
 

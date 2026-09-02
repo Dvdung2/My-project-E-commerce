@@ -16,6 +16,7 @@ namespace E_CommerceAPI.Data
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<WishlistItem> WishlistItems { get; set; }
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+        public DbSet<Coupon> Coupons { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,6 +39,10 @@ namespace E_CommerceAPI.Data
 
             modelBuilder.Entity<WishlistItem>()
                 .HasIndex(w => new { w.UserId, w.ProductId })
+                .IsUnique();
+
+            modelBuilder.Entity<Coupon>()
+                .HasIndex(c => c.Code)
                 .IsUnique();
 
             // Seed Categories

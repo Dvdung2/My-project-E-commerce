@@ -129,6 +129,13 @@ using (var scope = app.Services.CreateScope())
         });
         db.SaveChanges();
     }
+
+    // Seed a demo coupon once.
+    if (!db.Coupons.Any())
+    {
+        db.Coupons.Add(new Coupon { Code = "SAVE10", DiscountPercent = 10, MinOrderAmount = 50, IsActive = true, CreatedAt = DateTime.UtcNow });
+        db.SaveChanges();
+    }
 }
 
 app.UseExceptionHandler();

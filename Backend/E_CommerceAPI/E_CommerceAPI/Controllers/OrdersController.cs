@@ -17,6 +17,9 @@ namespace E_CommerceAPI.Controllers
         [Required, MaxLength(300)]
         public string ShippingAddress { get; set; } = string.Empty;
 
+        [MaxLength(40)]
+        public string? CouponCode { get; set; }
+
         [MinLength(1)]
         public List<OrderItemDto> Items { get; set; } = new();
     }
@@ -121,7 +124,22 @@ namespace E_CommerceAPI.Controllers
                 total += product.Price * item.Quantity;
             }
 
-            order.TotalAmount = total;
+            // Apply coupon if provided (validated against the subtotal).
+            decimal discount = 0;
+            if (!string.IsNullOrWhiteSpace(dto.CouponCode))
+            {
+                var code = dto.CouponCode.Trim().ToUpperInvariant();
+                var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Code == code);
+                var (valid, error) = CouponsController.Evaluate(coupon, total);
+                if (valid == null) return BadRequest(error);
+
+                discount = Math.Round(total * valid.DiscountPercent / 100m, 2);
+                valid.UsedCount += 1;
+                order.CouponCode = valid.Code;
+            }
+
+            order.DiscountAmount = discount;
+            order.TotalAmount = total - discount;
             order.StatusHistory.Add(new OrderStatusHistory { Status = OrderStatus.Pending, ChangedAt = DateTime.UtcNow });
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();

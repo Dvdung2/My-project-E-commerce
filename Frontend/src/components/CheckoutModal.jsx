@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createOrder } from '../services/api'
+import { createOrder, validateCoupon } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
 export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess }) {
@@ -10,10 +10,29 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState(null)
+  const [couponInput, setCouponInput] = useState('')
+  const [coupon, setCoupon] = useState(null) // { code, discountAmount }
+  const [couponMsg, setCouponMsg] = useState(null)
 
   useEffect(() => {
     if (user?.address) setShippingAddress(prev => prev || user.address)
   }, [user])
+
+  const applyCoupon = async () => {
+    setCouponMsg(null)
+    if (!couponInput.trim()) return
+    try {
+      const res = await validateCoupon(couponInput.trim(), totalAmount)
+      setCoupon(res.data)
+      setCouponMsg({ ok: true, text: `Áp dụng ${res.data.discountPercent}% (-$${res.data.discountAmount.toFixed(2)})` })
+    } catch (err) {
+      setCoupon(null)
+      setCouponMsg({ ok: false, text: err.response?.data || 'Mã không hợp lệ.' })
+    }
+  }
+
+  const discount = coupon?.discountAmount || 0
+  const payable = Math.max(0, totalAmount - discount)
 
   const submit = async e => {
     e.preventDefault()
@@ -21,6 +40,7 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
     try {
       await createOrder({
         shippingAddress,
+        couponCode: coupon?.code || undefined,
         items: cart.map(i => ({ productId: i.id, quantity: i.qty }))
       })
       setDone(true)
@@ -68,6 +88,16 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
                 <div className="err-msg">Vui lòng đăng nhập để đặt hàng.</div>
               )}
 
+              <div className="form-group">
+                <label className="form-label">Mã giảm giá</label>
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  <input className="form-input" value={couponInput} placeholder="VD: SAVE10"
+                    onChange={e => setCouponInput(e.target.value.toUpperCase())} style={{ flex: 1 }} />
+                  <button type="button" className="btn-sec" onClick={applyCoupon}>Áp dụng</button>
+                </div>
+                {couponMsg && <div className={couponMsg.ok ? 'ok-msg' : 'err-msg'} style={{ marginTop: '.4rem' }}>{couponMsg.text}</div>}
+              </div>
+
               <div className="order-sum">
                 <div className="order-sum-title">Tóm tắt đơn hàng</div>
                 {cart.map(i => (
@@ -76,9 +106,19 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
                     <span>${(i.price * i.qty).toFixed(2)}</span>
                   </div>
                 ))}
+                <div className="order-sum-row">
+                  <span>Tạm tính</span>
+                  <span>${totalAmount.toFixed(2)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="order-sum-row" style={{ color: '#4ade80' }}>
+                    <span>Giảm giá ({coupon.code})</span>
+                    <span>-${discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="order-sum-total">
                   <span>Tổng cộng</span>
-                  <span>${totalAmount.toFixed(2)}</span>
+                  <span>${payable.toFixed(2)}</span>
                 </div>
               </div>
 
