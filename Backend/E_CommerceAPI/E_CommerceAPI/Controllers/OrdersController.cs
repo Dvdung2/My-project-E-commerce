@@ -4,16 +4,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace E_CommerceAPI.Controllers
 {
     public class CreateOrderDto
     {
-        [Required, MaxLength(100)]
-        public string CustomerName { get; set; } = string.Empty;
-
-        [Required, EmailAddress, MaxLength(200)]
-        public string CustomerEmail { get; set; } = string.Empty;
+        // CustomerName and CustomerEmail are intentionally NOT accepted from the
+        // client. The authenticated user's identity is taken from the JWT so a
+        // caller cannot place an order under someone else's name/email.
 
         [Required, MaxLength(300)]
         public string ShippingAddress { get; set; } = string.Empty;
@@ -77,10 +76,13 @@ namespace E_CommerceAPI.Controllers
 
         // POST: api/orders
         [HttpPost]
+        [Authorize(Roles = "Customer")]
         public async Task<IActionResult> Create([FromBody] CreateOrderDto dto)
         {
-            if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
-                return Forbid();
+            var customerEmail = User.FindFirstValue(ClaimTypes.Email);
+            var customerName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(customerEmail) || string.IsNullOrWhiteSpace(customerName))
+                return Unauthorized();
 
             if (dto.Items.Count == 0)
                 return BadRequest("Giỏ hàng đang trống.");
@@ -94,8 +96,8 @@ namespace E_CommerceAPI.Controllers
 
             var order = new Order
             {
-                CustomerName = dto.CustomerName.Trim(),
-                CustomerEmail = dto.CustomerEmail.Trim().ToLowerInvariant(),
+                CustomerName = customerName.Trim(),
+                CustomerEmail = customerEmail.Trim().ToLowerInvariant(),
                 ShippingAddress = dto.ShippingAddress.Trim(),
                 CreatedAt = DateTime.UtcNow,
                 Status = OrderStatus.Pending
