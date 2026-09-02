@@ -80,6 +80,20 @@ namespace E_CommerceAPI.Controllers
             var items = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    p.Price,
+                    p.ImageUrl,
+                    p.Stock,
+                    p.CategoryId,
+                    p.Category,
+                    p.CreatedAt,
+                    averageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0,
+                    reviewCount = p.Reviews.Count
+                })
                 .ToListAsync();
 
             return Ok(new
