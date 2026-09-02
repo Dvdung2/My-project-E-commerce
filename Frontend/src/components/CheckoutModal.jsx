@@ -4,34 +4,23 @@ import { useAuth } from '../context/AuthContext'
 
 export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess }) {
   const { user } = useAuth()
-  const [form, setForm] = useState({
-    customerName: user?.fullName || '',
-    customerEmail: user?.email || '',
-    shippingAddress: user?.address || ''
-  })
+  // Name and email come from the authenticated user (the backend derives them
+  // from the JWT); only the shipping address is collected here.
+  const [shippingAddress, setShippingAddress] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!user) return
-    setForm(prev => ({
-      customerName: prev.customerName || user.fullName || '',
-      customerEmail: prev.customerEmail || user.email || '',
-      shippingAddress: prev.shippingAddress || user.address || ''
-    }))
+    if (user?.address) setShippingAddress(prev => prev || user.address)
   }, [user])
-
-  const set = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
   const submit = async e => {
     e.preventDefault()
     setLoading(true); setError(null)
     try {
       await createOrder({
-        customerName: form.customerName,
-        customerEmail: form.customerEmail,
-        shippingAddress: form.shippingAddress,
+        shippingAddress,
         items: cart.map(i => ({ productId: i.id, quantity: i.qty }))
       })
       setDone(true)
@@ -62,19 +51,22 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
             <div className="modal-body">
               <div className="form-group">
                 <label className="form-label">Họ và tên</label>
-                <input className="form-input" name="customerName" value={form.customerName}
-                  onChange={set} placeholder="Nguyễn Văn A" required />
+                <input className="form-input" value={user?.fullName || ''} disabled readOnly />
               </div>
               <div className="form-group">
                 <label className="form-label">Email</label>
-                <input className="form-input" name="customerEmail" type="email" value={form.customerEmail}
-                  onChange={set} placeholder="email@example.com" required />
+                <input className="form-input" type="email" value={user?.email || ''} disabled readOnly />
               </div>
               <div className="form-group">
                 <label className="form-label">Địa chỉ giao hàng</label>
-                <input className="form-input" name="shippingAddress" value={form.shippingAddress}
-                  onChange={set} placeholder="123 Đường ABC, Quận 1, TP.HCM" required />
+                <input className="form-input" name="shippingAddress" value={shippingAddress}
+                  onChange={e => setShippingAddress(e.target.value)}
+                  placeholder="123 Đường ABC, Quận 1, TP.HCM" required />
               </div>
+
+              {!user && (
+                <div className="err-msg">Vui lòng đăng nhập để đặt hàng.</div>
+              )}
 
               <div className="order-sum">
                 <div className="order-sum-title">Tóm tắt đơn hàng</div>
@@ -95,7 +87,7 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onSuccess })
 
             <div className="modal-foot">
               <button type="button" className="btn-sec" onClick={onClose}>Hủy</button>
-              <button id="submit-order" type="submit" className="btn-primary" disabled={loading || cart.length === 0}>
+              <button id="submit-order" type="submit" className="btn-primary" disabled={loading || cart.length === 0 || !user}>
                 {loading ? 'Đang xử lý...' : cart.length === 0 ? 'Giỏ hàng trống' : 'Xác nhận đặt hàng'}
               </button>
             </div>

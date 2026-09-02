@@ -38,12 +38,24 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Fail fast on missing/weak secrets instead of crashing at first use.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException(
+        "ConnectionStrings:DefaultConnection is not configured. Set it via environment variables, " +
+        "user secrets, or appsettings.Development.json (see .env.example).");
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException(
+        "Jwt:Key is missing or too short. Provide a random secret of at least 32 bytes " +
+        "via environment variables or user secrets (see .env.example).");
+
 // DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
 // JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

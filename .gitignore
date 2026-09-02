@@ -33,6 +33,7 @@ Frontend/coverage/
 # .NET / ASP.NET Core
 **/bin/
 **/obj/
+**/.vs/
 **/TestResults/
 *.user
 *.suo
