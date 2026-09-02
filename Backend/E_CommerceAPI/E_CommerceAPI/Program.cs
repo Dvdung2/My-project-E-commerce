@@ -146,6 +146,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Serve uploaded images from wwwroot (created if missing so the provider resolves).
+var webRootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRootPath)
+});
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();
 app.UseAuthentication();

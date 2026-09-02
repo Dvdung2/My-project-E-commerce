@@ -102,6 +102,12 @@ namespace E_CommerceAPI.Controllers
             var ratings = await _context.Reviews.Where(r => r.ProductId == id).Select(r => r.Rating).ToListAsync();
             var averageRating = ratings.Count > 0 ? Math.Round(ratings.Average(), 1) : 0;
 
+            var images = await _context.ProductImages
+                .Where(pi => pi.ProductId == id)
+                .OrderBy(pi => pi.SortOrder)
+                .Select(pi => new { pi.Id, pi.Url })
+                .ToListAsync();
+
             return Ok(new
             {
                 product.Id,
@@ -113,6 +119,7 @@ namespace E_CommerceAPI.Controllers
                 product.CategoryId,
                 product.Category,
                 product.CreatedAt,
+                images,
                 averageRating,
                 reviewCount = ratings.Count
             });
@@ -207,6 +214,35 @@ namespace E_CommerceAPI.Controllers
 
             await _context.SaveChangesAsync();
             return Ok(product);
+        }
+
+        public class ProductImageDto { public string Url { get; set; } = string.Empty; }
+
+        // POST: api/products/5/images  (admin) -> add a gallery image
+        [HttpPost("{id}/images")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AddImage(int id, [FromBody] ProductImageDto dto)
+        {
+            if (!await _context.Products.AnyAsync(p => p.Id == id)) return NotFound();
+            if (string.IsNullOrWhiteSpace(dto.Url)) return BadRequest("URL ảnh trống.");
+
+            var maxSort = await _context.ProductImages.Where(pi => pi.ProductId == id).MaxAsync(pi => (int?)pi.SortOrder) ?? 0;
+            var image = new ProductImage { ProductId = id, Url = dto.Url.Trim(), SortOrder = maxSort + 1 };
+            _context.ProductImages.Add(image);
+            await _context.SaveChangesAsync();
+            return Ok(new { image.Id, image.Url });
+        }
+
+        // DELETE: api/products/images/5  (admin)
+        [HttpDelete("images/{imageId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteImage(int imageId)
+        {
+            var image = await _context.ProductImages.FindAsync(imageId);
+            if (image == null) return NotFound();
+            _context.ProductImages.Remove(image);
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
 
         // DELETE: api/products/5

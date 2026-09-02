@@ -8,6 +8,7 @@ import {
   deleteProduct,
   deleteUser,
   getAnalytics,
+  uploadImage,
   getCategories,
   getOrders,
   getProducts,
@@ -446,8 +447,15 @@ export default function AdminDashboardPage({ onChanged }) {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Ảnh URL</label>
-                  <input className="form-input" name="imageUrl" value={productForm.imageUrl} onChange={setProductField} />
+                  <label className="form-label">Ảnh (URL hoặc tải lên)</label>
+                  <input className="form-input" name="imageUrl" value={productForm.imageUrl} onChange={setProductField} placeholder="https://... hoặc tải lên ↓" />
+                  <input type="file" accept="image/*" style={{ marginTop: '.4rem', fontSize: '.75rem', color: 'var(--text3)' }}
+                    onChange={async e => {
+                      const f = e.target.files?.[0]; if (!f) return
+                      try { const res = await uploadImage(f); setProductForm(prev => ({ ...prev, imageUrl: res.data.url })) }
+                      catch { setMessage({ type: 'err', text: 'Tải ảnh thất bại.' }) }
+                    }} />
+                  {productForm.imageUrl && <img src={productForm.imageUrl} alt="" style={{ marginTop: '.5rem', width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />}
                 </div>
                 <div className="form-group wide">
                   <label className="form-label">Mô tả</label>

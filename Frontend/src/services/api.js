@@ -43,6 +43,13 @@ api.interceptors.response.use(
 
 export const getProducts = (params) => api.get('/products', { params })
 export const getProductById = (id) => api.get(`/products/${id}`)
+export const uploadImage = (file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return api.post('/uploads', fd, { headers: { 'Content-Type': undefined } })
+}
+export const addProductImage = (productId, url) => api.post(`/products/${productId}/images`, { url })
+export const deleteProductImage = (imageId) => api.delete(`/products/images/${imageId}`)
 export const getRelated = (id) => api.get(`/products/${id}/related`)
 export const getProductsByIds = (ids) => api.get('/products/by-ids', { params: { ids: ids.join(',') } })
 export const getCategories = () => api.get('/categories')

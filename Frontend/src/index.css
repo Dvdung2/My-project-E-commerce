@@ -669,3 +669,9 @@ button.admin-table-row:hover { background:var(--bg3); color:var(--white); }
 .mini-img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; margin-bottom:.5rem; }
 .mini-name { font-size:.8rem; color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mini-price { font-size:.82rem; color:var(--white); font-weight:700; margin-top:.2rem; }
+
+/* ── Product gallery thumbnails ─────────────────────────────── */
+.gallery-thumbs { display:flex; gap:.5rem; margin-top:.7rem; flex-wrap:wrap; }
+.gallery-thumb { width:64px; height:64px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid transparent; opacity:.7; transition:opacity .15s, border-color .15s; }
+.gallery-thumb:hover { opacity:1; }
+.gallery-thumb.active { border-color:var(--white); opacity:1; }

@@ -120,11 +120,12 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
   const [qty, setQty] = useState(1)
   const [related, setRelated] = useState([])
   const [recent, setRecent] = useState([])
+  const [activeImg, setActiveImg] = useState(null)
 
   useEffect(() => {
     setLoading(true)
     getProductById(id)
-      .then(res => setProduct(res.data))
+      .then(res => { setProduct(res.data); setActiveImg(res.data.imageUrl) })
       .catch(err => console.error(err))
       .finally(() => setLoading(false))
     getRelated(id).then(r => setRelated(r.data)).catch(() => {})
@@ -180,12 +181,21 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
         {/* Left: Image */}
         <div style={{ flex: '1 1 500px', maxWidth: '100%' }}>
           <div className="grid-wrap" style={{ borderRadius: 'var(--r)', overflow: 'hidden' }}>
-            <img 
-              src={product.imageUrl || 'https://via.placeholder.com/600'} 
+            <img
+              src={activeImg || product.imageUrl || 'https://via.placeholder.com/600'}
               alt={product.name}
               style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }}
             />
           </div>
+          {product.images?.length > 0 && (
+            <div className="gallery-thumbs">
+              {[{ id: 'main', url: product.imageUrl }, ...product.images].filter(t => t.url).map(t => (
+                <img key={t.id} src={t.url} alt="" className={`gallery-thumb ${activeImg === t.url ? 'active' : ''}`}
+                  onClick={() => setActiveImg(t.url)}
+                  onError={e => { e.target.style.display = 'none' }} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Info */}

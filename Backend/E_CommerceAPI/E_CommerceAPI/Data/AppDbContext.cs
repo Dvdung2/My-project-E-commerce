@@ -19,6 +19,7 @@ namespace E_CommerceAPI.Data
         public DbSet<Coupon> Coupons { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Address> Addresses { get; set; }
+        public DbSet<ProductImage> ProductImages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
