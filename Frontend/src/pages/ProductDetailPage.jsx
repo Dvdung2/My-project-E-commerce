@@ -1,19 +1,148 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getProductById } from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { getProductById, getReviews, submitReview, getRelated, getProductsByIds } from '../services/api'
+import { useAuth } from '../context/AuthContext'
+
+const RECENT_KEY = 'shopvn_recent'
+
+function MiniGrid({ title, items, onOpen }) {
+  if (!items || items.length === 0) return null
+  return (
+    <div style={{ marginTop: '2.5rem' }}>
+      <h2 className="section-title" style={{ fontSize: '1.4rem', marginBottom: '1rem' }}>{title}</h2>
+      <div className="mini-grid">
+        {items.map(p => (
+          <div key={p.id} className="mini-card" onClick={() => onOpen(p.id)}>
+            <img className="mini-img" src={p.imageUrl || 'https://via.placeholder.com/200'} alt={p.name}
+              onError={e => { e.target.src = 'https://via.placeholder.com/200?text=No+Image' }} />
+            <div className="mini-name">{p.name}</div>
+            <div className="mini-price">${p.price.toFixed(2)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Stars({ value, size = '1rem', onSelect }) {
+  return (
+    <span className="stars" style={{ fontSize: size }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <span
+          key={n}
+          className={`star ${n <= Math.round(value) ? 'on' : ''} ${onSelect ? 'clickable' : ''}`}
+          onClick={onSelect ? () => onSelect(n) : undefined}
+          role={onSelect ? 'button' : undefined}
+        >★</span>
+      ))}
+    </span>
+  )
+}
+
+function ReviewsSection({ productId }) {
+  const { user } = useAuth()
+  const [data, setData] = useState({ average: 0, count: 0, reviews: [] })
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+  const [msg, setMsg] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const load = () => getReviews(productId).then(r => setData(r.data)).catch(e => console.error(e))
+  useEffect(() => { load() }, [productId])
+
+  const submit = async e => {
+    e.preventDefault()
+    setSubmitting(true); setMsg(null)
+    try {
+      await submitReview(productId, { rating, comment })
+      setComment('')
+      setMsg({ ok: true, text: 'Cảm ơn đánh giá của bạn!' })
+      load()
+    } catch (err) {
+      const code = err.response?.status
+      setMsg({ ok: false, text: code === 403 ? 'Chỉ khách đã mua sản phẩm mới được đánh giá.' : (err.response?.data || 'Không gửi được đánh giá.') })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="reviews-section">
+      <div className="divider" style={{ margin: '3rem 0 2rem' }} />
+      <h2 className="section-title" style={{ fontSize: '1.6rem' }}>Đánh giá sản phẩm</h2>
+      <div className="reviews-summary">
+        <div className="reviews-avg">{data.average.toFixed(1)}</div>
+        <div>
+          <Stars value={data.average} size="1.1rem" />
+          <div className="reviews-count">{data.count} đánh giá</div>
+        </div>
+      </div>
+
+      {user && user.role === 'Customer' && (
+        <form className="review-form" onSubmit={submit}>
+          <div className="review-form-row">
+            <span style={{ fontSize: '.85rem', color: 'var(--text2)' }}>Chấm điểm:</span>
+            <Stars value={rating} size="1.4rem" onSelect={setRating} />
+          </div>
+          <textarea className="review-textarea" rows={3} placeholder="Chia sẻ cảm nhận của bạn..."
+            value={comment} onChange={e => setComment(e.target.value)} maxLength={1000} />
+          {msg && <div className={msg.ok ? 'ok-msg' : 'err-msg'}>{msg.text}</div>}
+          <button className="btn-primary" disabled={submitting} style={{ alignSelf: 'flex-start' }}>
+            {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+          </button>
+        </form>
+      )}
+
+      <div className="review-list">
+        {data.reviews.length === 0 ? (
+          <p style={{ color: 'var(--text3)', fontSize: '.88rem' }}>Chưa có đánh giá nào.</p>
+        ) : data.reviews.map(r => (
+          <div key={r.id} className="review-item">
+            <div className="review-item-head">
+              <span className="review-author">{r.userName}</span>
+              <Stars value={r.rating} size=".85rem" />
+              <span className="review-date">{new Date(r.createdAt).toLocaleDateString('vi-VN')}</span>
+            </div>
+            {r.comment && <p className="review-comment">{r.comment}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishlist }) {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [qty, setQty] = useState(1)
+  const [related, setRelated] = useState([])
+  const [recent, setRecent] = useState([])
+  const [activeImg, setActiveImg] = useState(null)
 
   useEffect(() => {
     setLoading(true)
     getProductById(id)
-      .then(res => setProduct(res.data))
+      .then(res => { setProduct(res.data); setActiveImg(res.data.imageUrl) })
       .catch(err => console.error(err))
       .finally(() => setLoading(false))
+    getRelated(id).then(r => setRelated(r.data)).catch(() => {})
+  }, [id])
+
+  // Track & load recently-viewed (client-side history, excluding current).
+  useEffect(() => {
+    let ids = []
+    try { ids = JSON.parse(localStorage.getItem(RECENT_KEY)) || [] } catch { ids = [] }
+    const others = ids.filter(x => x !== Number(id))
+    if (others.length > 0) {
+      getProductsByIds(others.slice(0, 8)).then(r => setRecent(r.data)).catch(() => {})
+    } else {
+      setRecent([])
+    }
+    const next = [Number(id), ...others].slice(0, 8)
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* ignore */ }
   }, [id])
 
   if (loading) return (
@@ -52,12 +181,21 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
         {/* Left: Image */}
         <div style={{ flex: '1 1 500px', maxWidth: '100%' }}>
           <div className="grid-wrap" style={{ borderRadius: 'var(--r)', overflow: 'hidden' }}>
-            <img 
-              src={product.imageUrl || 'https://via.placeholder.com/600'} 
+            <img
+              src={activeImg || product.imageUrl || 'https://via.placeholder.com/600'}
               alt={product.name}
               style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }}
             />
           </div>
+          {product.images?.length > 0 && (
+            <div className="gallery-thumbs">
+              {[{ id: 'main', url: product.imageUrl }, ...product.images].filter(t => t.url).map(t => (
+                <img key={t.id} src={t.url} alt="" className={`gallery-thumb ${activeImg === t.url ? 'active' : ''}`}
+                  onClick={() => setActiveImg(t.url)}
+                  onError={e => { e.target.style.display = 'none' }} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Info */}
@@ -78,6 +216,15 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
             </button>
           </div>
           
+          {product.reviewCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.8rem' }}>
+              <Stars value={product.averageRating} size="1rem" />
+              <span style={{ fontSize: '.82rem', color: 'var(--text2)' }}>
+                {product.averageRating.toFixed(1)} · {product.reviewCount} đánh giá
+              </span>
+            </div>
+          )}
+
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--white)', marginBottom: '1.5rem' }}>
             ${product.price.toFixed(2)}
           </div>
@@ -135,6 +282,11 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
           </div>
         </div>
       </div>
+
+      <MiniGrid title="Sản phẩm liên quan" items={related} onOpen={pid => navigate(`/product/${pid}`)} />
+      <MiniGrid title="Đã xem gần đây" items={recent} onOpen={pid => navigate(`/product/${pid}`)} />
+
+      <ReviewsSection productId={product.id} />
     </div>
   )
 }

@@ -18,7 +18,7 @@ namespace E_CommerceAPI.Controllers
     [Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
-        private static readonly string[] Roles = ["Admin", "Customer"];
+        private static readonly string[] Roles = ["Admin", "Staff", "Customer"];
         private readonly AppDbContext _context;
 
         public UsersController(AppDbContext context)

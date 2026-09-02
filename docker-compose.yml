@@ -4,13 +4,13 @@ services:
     container_name: ecommerce_db
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=Your_Strong_Password_123!
+      - MSSQL_SA_PASSWORD=${SA_PASSWORD:?SA_PASSWORD is required (see .env.example)}
     ports:
       - "1433:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Your_Strong_Password_123!' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Your_Strong_Password_123!' -Q 'SELECT 1'"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1'"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -25,10 +25,11 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=EcommerceDb;User Id=sa;Password=Your_Strong_Password_123!;TrustServerCertificate=True;
-      - SeedAdmin__Email=admin@shopvn.local
-      - SeedAdmin__Password=Admin123!
-      - SeedAdmin__FullName=Shop Admin
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=EcommerceDb;User Id=sa;Password=${SA_PASSWORD:?SA_PASSWORD is required (see .env.example)};TrustServerCertificate=True;
+      - Jwt__Key=${JWT_KEY:?JWT_KEY is required (see .env.example)}
+      - SeedAdmin__Email=${SEED_ADMIN_EMAIL:?SEED_ADMIN_EMAIL is required (see .env.example)}
+      - SeedAdmin__Password=${SEED_ADMIN_PASSWORD:?SEED_ADMIN_PASSWORD is required (see .env.example)}
+      - SeedAdmin__FullName=${SEED_ADMIN_NAME:-Shop Admin}
     depends_on:
       sqlserver:
         condition: service_healthy

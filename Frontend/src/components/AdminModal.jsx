@@ -65,8 +65,8 @@ export default function AdminModal({ onClose, onChanged }) {
     setLoading(true)
     setMessage(null)
     try {
-      const [p, c, o] = await Promise.all([getProducts(), getCategories(), getOrders()])
-      setProducts(p.data)
+      const [p, c, o] = await Promise.all([getProducts({ pageSize: 100 }), getCategories(), getOrders()])
+      setProducts(p.data.items)
       setCategories(c.data)
       setOrders(o.data)
     } catch (err) {

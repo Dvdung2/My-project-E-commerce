@@ -23,5 +23,11 @@ namespace E_CommerceAPI.Models
         public Category? Category { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public bool IsDeleted { get; set; } = false;
+
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+        public ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
     }
 }
