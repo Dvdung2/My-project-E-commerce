@@ -187,6 +187,26 @@ namespace E_CommerceAPI.Controllers
             return Ok(order);
         }
 
+        // GET: api/orders/5/invoice  -> PDF (owning customer, or Admin/Staff)
+        [HttpGet("{id}/invoice")]
+        [Authorize]
+        public async Task<IActionResult> Invoice(int id)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == id);
+            if (order == null) return NotFound();
+
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            var email = User.FindFirstValue(ClaimTypes.Email)?.Trim().ToLowerInvariant();
+            if (role != "Admin" && role != "Staff" && order.CustomerEmail != email)
+                return Forbid();
+
+            var pdf = Services.InvoicePdf.Generate(order);
+            return File(pdf, "application/pdf", $"invoice-{order.Id}.pdf");
+        }
+
         // POST: api/orders/5/cancel  -> customer cancels own pending order
         [HttpPost("{id}/cancel")]
         [Authorize(Roles = "Customer")]

@@ -85,6 +85,7 @@ export const getCoupons = () => api.get('/coupons')
 export const createCoupon = (data) => api.post('/coupons', data)
 export const deleteCoupon = (id) => api.delete(`/coupons/${id}`)
 export const cancelOrder = (id) => api.post(`/orders/${id}/cancel`)
+export const downloadInvoice = (id) => api.get(`/orders/${id}/invoice`, { responseType: 'blob' })
 export const changePassword = (data) => api.post('/auth/change-password', data)
 
 export const getReviews = (productId) => api.get(`/products/${productId}/reviews`)

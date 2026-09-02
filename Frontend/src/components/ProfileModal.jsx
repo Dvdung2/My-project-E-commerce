@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { updateProfile, getMyOrders, cancelOrder, changePassword,
+import { updateProfile, getMyOrders, cancelOrder, changePassword, downloadInvoice,
   getAddresses, createAddress, deleteAddress, setDefaultAddress } from '../services/api'
 
 const STATUS_LABEL = {
@@ -43,6 +43,16 @@ export default function ProfileModal({ onClose }) {
   const doCancel = async (id) => {
     try { await cancelOrder(id); loadOrders() }
     catch (err) { alert(err.response?.data || 'Không hủy được đơn') }
+  }
+
+  const doInvoice = async (id) => {
+    try {
+      const res = await downloadInvoice(id)
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url; a.download = `invoice-${id}.pdf`; a.click()
+      URL.revokeObjectURL(url)
+    } catch { alert('Không tải được hóa đơn') }
   }
 
   const savePassword = async e => {
@@ -184,14 +194,20 @@ export default function ProfileModal({ onClose }) {
                   <span>Tổng</span>
                   <span>${order.totalAmount?.toFixed(2)}</span>
                 </div>
-                {order.status === 0 && (
-                  <button onClick={() => doCancel(order.id)} style={{
-                    marginTop: '.6rem', width: '100%', background: 'none',
-                    border: '1px solid rgba(239,68,68,.35)', color: '#ef4444',
+                <div style={{ display: 'flex', gap: '.5rem', marginTop: '.6rem' }}>
+                  <button onClick={() => doInvoice(order.id)} style={{
+                    flex: 1, background: 'none', border: '1px solid var(--line)', color: 'var(--text2)',
                     padding: '.4rem', borderRadius: 'var(--r3)', cursor: 'pointer',
                     fontSize: '.75rem', fontFamily: 'Inter,sans-serif'
-                  }}>Hủy đơn hàng</button>
-                )}
+                  }}>Tải hóa đơn PDF</button>
+                  {order.status === 0 && (
+                    <button onClick={() => doCancel(order.id)} style={{
+                      flex: 1, background: 'none', border: '1px solid rgba(239,68,68,.35)', color: '#ef4444',
+                      padding: '.4rem', borderRadius: 'var(--r3)', cursor: 'pointer',
+                      fontSize: '.75rem', fontFamily: 'Inter,sans-serif'
+                    }}>Hủy đơn hàng</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
