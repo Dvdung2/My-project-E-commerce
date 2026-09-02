@@ -69,16 +69,37 @@ function NavIcon({ name }) {
   )
 }
 
+const shortMoney = (v) =>
+  v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${Math.round(v)}`
+
 function RevenueChart({ data }) {
   const max = Math.max(1, ...data.map(d => d.revenue))
+  const total = data.reduce((s, d) => s + d.revenue, 0)
+  const orders = data.reduce((s, d) => s + d.orders, 0)
   return (
-    <div className="rev-chart">
-      {data.map(d => (
-        <div className="rev-bar-wrap" key={d.date} title={`${d.date}: ${money(d.revenue)} (${d.orders} đơn)`}>
-          <div className="rev-bar" style={{ height: `${(d.revenue / max) * 100}%` }} />
-          <span className="rev-label">{d.date.slice(5)}</span>
+    <div className="rev">
+      <div className="rev-legend">
+        <span><b>{shortMoney(total)}</b> tổng 14 ngày</span>
+        <span><b>{orders}</b> đơn</span>
+      </div>
+      <div className="rev-plot">
+        <div className="rev-yaxis">
+          <span>{shortMoney(max)}</span>
+          <span>{shortMoney(max / 2)}</span>
+          <span>$0</span>
         </div>
-      ))}
+        <div className="rev-grid">
+          {data.map(d => (
+            <div className="rev-col" key={d.date} title={`${d.date}: ${money(d.revenue)} · ${d.orders} đơn`}>
+              <div className="rev-track">
+                {d.revenue > 0 && <span className="rev-val">{shortMoney(d.revenue)}</span>}
+                <div className="rev-bar" style={{ height: `${Math.max((d.revenue / max) * 100, d.revenue > 0 ? 3 : 0)}%` }} />
+              </div>
+              <span className="rev-label">{d.date.slice(5)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
