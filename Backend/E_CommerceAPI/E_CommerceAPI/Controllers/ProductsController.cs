@@ -172,7 +172,7 @@ namespace E_CommerceAPI.Controllers
 
         // POST: api/products
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Create([FromBody] ProductDto dto)
         {
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
@@ -196,7 +196,7 @@ namespace E_CommerceAPI.Controllers
 
         // PUT: api/products/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Update(int id, [FromBody] ProductDto dto)
         {
             var product = await _context.Products.FindAsync(id);
@@ -220,7 +220,7 @@ namespace E_CommerceAPI.Controllers
 
         // POST: api/products/5/images  (admin) -> add a gallery image
         [HttpPost("{id}/images")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> AddImage(int id, [FromBody] ProductImageDto dto)
         {
             if (!await _context.Products.AnyAsync(p => p.Id == id)) return NotFound();
@@ -235,7 +235,7 @@ namespace E_CommerceAPI.Controllers
 
         // DELETE: api/products/images/5  (admin)
         [HttpDelete("images/{imageId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> DeleteImage(int imageId)
         {
             var image = await _context.ProductImages.FindAsync(imageId);
@@ -247,7 +247,7 @@ namespace E_CommerceAPI.Controllers
 
         // DELETE: api/products/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _context.Products.FindAsync(id);

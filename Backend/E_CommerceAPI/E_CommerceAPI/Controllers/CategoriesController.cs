@@ -45,7 +45,7 @@ namespace E_CommerceAPI.Controllers
 
         // POST: api/categories
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Create([FromBody] CategoryDto dto)
         {
             var category = new Category
@@ -61,7 +61,7 @@ namespace E_CommerceAPI.Controllers
 
         // PUT: api/categories/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Update(int id, [FromBody] CategoryDto dto)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -75,7 +75,7 @@ namespace E_CommerceAPI.Controllers
 
         // DELETE: api/categories/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Delete(int id)
         {
             var category = await _context.Categories.FindAsync(id);

@@ -54,7 +54,7 @@ namespace E_CommerceAPI.Controllers
 
         // GET: api/orders
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetAll()
         {
             var orders = await _context.Orders
@@ -68,7 +68,7 @@ namespace E_CommerceAPI.Controllers
 
         // GET: api/orders/5
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetById(int id)
         {
             var order = await _context.Orders
@@ -164,7 +164,7 @@ namespace E_CommerceAPI.Controllers
 
         // PATCH: api/orders/5/status
         [HttpPatch("{id}/status")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
         {
             if (!Enum.IsDefined(typeof(OrderStatus), dto.Status))

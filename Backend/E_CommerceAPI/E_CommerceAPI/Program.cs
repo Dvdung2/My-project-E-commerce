@@ -27,7 +27,11 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Controllers + JSON options
-builder.Services.AddControllers()
+builder.Services.AddScoped<E_CommerceAPI.Middleware.AuditActionFilter>();
+builder.Services.AddControllers(options =>
+    {
+        options.Filters.AddService<E_CommerceAPI.Middleware.AuditActionFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
