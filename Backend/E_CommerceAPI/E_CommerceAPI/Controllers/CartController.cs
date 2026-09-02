@@ -56,7 +56,7 @@ namespace E_CommerceAPI.Controllers
         public async Task<IActionResult> Add([FromBody] CartItemDto dto)
         {
             var product = await _context.Products.FindAsync(dto.ProductId);
-            if (product == null) return BadRequest("Sản phẩm không tồn tại.");
+            if (product == null || product.IsDeleted) return BadRequest("Sản phẩm không tồn tại.");
 
             var item = await _context.CartItems.FirstOrDefaultAsync(c => c.UserId == UserId && c.ProductId == dto.ProductId);
             var newQty = (item?.Quantity ?? 0) + dto.Quantity;

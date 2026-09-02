@@ -54,7 +54,7 @@ namespace E_CommerceAPI.Controllers
             if (page < 1) page = 1;
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var query = _context.Products.Include(p => p.Category).AsNoTracking().AsQueryable();
+            var query = _context.Products.Where(p => !p.IsDeleted).Include(p => p.Category).AsNoTracking().AsQueryable();
 
             if (categoryId.HasValue)
                 query = query.Where(p => p.CategoryId == categoryId);
@@ -172,10 +172,16 @@ namespace E_CommerceAPI.Controllers
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
 
+            // Soft delete: keeps referential integrity for existing orders while
+            // removing the product from the catalog.
             if (await _context.OrderItems.AnyAsync(i => i.ProductId == id))
-                return Conflict("Không thể xóa sản phẩm đã có trong đơn hàng.");
-
-            _context.Products.Remove(product);
+            {
+                product.IsDeleted = true;
+            }
+            else
+            {
+                _context.Products.Remove(product);
+            }
             await _context.SaveChangesAsync();
             return NoContent();
         }

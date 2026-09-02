@@ -24,7 +24,7 @@ namespace E_CommerceAPI.Controllers
             var totalRevenue = await paidOrders.SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
             var totalOrders = await _context.Orders.CountAsync();
             var totalCustomers = await _context.Users.CountAsync(u => u.Role == "Customer");
-            var totalProducts = await _context.Products.CountAsync();
+            var totalProducts = await _context.Products.CountAsync(p => !p.IsDeleted);
 
             // Revenue for the last 14 days.
             var since = DateTime.UtcNow.Date.AddDays(-13);
@@ -64,7 +64,7 @@ namespace E_CommerceAPI.Controllers
                 .ToListAsync();
 
             var lowStock = await _context.Products
-                .Where(p => p.Stock <= 5)
+                .Where(p => p.Stock <= 5 && !p.IsDeleted)
                 .OrderBy(p => p.Stock)
                 .Select(p => new { p.Id, p.Name, p.Stock })
                 .ToListAsync();

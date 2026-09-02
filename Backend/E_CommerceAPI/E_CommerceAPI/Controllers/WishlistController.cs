@@ -45,7 +45,7 @@ namespace E_CommerceAPI.Controllers
         [HttpPost("{productId}")]
         public async Task<IActionResult> Toggle(int productId)
         {
-            if (!await _context.Products.AnyAsync(p => p.Id == productId))
+            if (!await _context.Products.AnyAsync(p => p.Id == productId && !p.IsDeleted))
                 return BadRequest("Sản phẩm không tồn tại.");
 
             var item = await _context.WishlistItems.FirstOrDefaultAsync(w => w.UserId == UserId && w.ProductId == productId);
