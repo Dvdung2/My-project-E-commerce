@@ -38,9 +38,22 @@ namespace E_CommerceAPI.Controllers
         }
 
         // GET: api/products
+        // Supports filtering (category, search, price range, in-stock),
+        // sorting (newest|price_asc|price_desc|name|best_selling) and paging.
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] int? categoryId, [FromQuery] string? search)
+        public async Task<IActionResult> GetAll(
+            [FromQuery] int? categoryId,
+            [FromQuery] string? search,
+            [FromQuery] decimal? minPrice,
+            [FromQuery] decimal? maxPrice,
+            [FromQuery] bool? inStock,
+            [FromQuery] string? sort,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12)
         {
+            if (page < 1) page = 1;
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
             var query = _context.Products.Include(p => p.Category).AsNoTracking().AsQueryable();
 
             if (categoryId.HasValue)
@@ -50,8 +63,33 @@ namespace E_CommerceAPI.Controllers
             if (!string.IsNullOrWhiteSpace(keyword))
                 query = query.Where(p => p.Name.Contains(keyword) || (p.Description != null && p.Description.Contains(keyword)));
 
-            var products = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
-            return Ok(products);
+            if (minPrice.HasValue) query = query.Where(p => p.Price >= minPrice.Value);
+            if (maxPrice.HasValue) query = query.Where(p => p.Price <= maxPrice.Value);
+            if (inStock == true) query = query.Where(p => p.Stock > 0);
+
+            query = sort switch
+            {
+                "price_asc" => query.OrderBy(p => p.Price),
+                "price_desc" => query.OrderByDescending(p => p.Price),
+                "name" => query.OrderBy(p => p.Name),
+                "best_selling" => query.OrderByDescending(p => p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0),
+                _ => query.OrderByDescending(p => p.CreatedAt),
+            };
+
+            var totalItems = await query.CountAsync();
+            var items = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                items,
+                page,
+                pageSize,
+                totalItems,
+                totalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            });
         }
 
         // GET: api/products/5

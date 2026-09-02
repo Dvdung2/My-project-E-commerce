@@ -600,3 +600,32 @@ button.admin-table-row:hover { background:var(--bg3); color:var(--white); }
   .admin-actions { flex-direction:column; }
   .admin-actions > * { width:100%; justify-content:center; }
 }
+
+/* ── Product filter bar & pagination ────────────────────────── */
+.filter-bar {
+  display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
+  margin:1rem 0 1.2rem;
+}
+.filter-select, .filter-price {
+  background:var(--bg2); border:1px solid var(--line); color:var(--text);
+  border-radius:8px; padding:.5rem .7rem; font-size:.82rem; font-family:inherit;
+}
+.filter-select:focus, .filter-price:focus { outline:none; border-color:var(--line2); }
+.filter-price { width:110px; }
+.filter-check {
+  display:flex; align-items:center; gap:.4rem; font-size:.82rem;
+  color:var(--text2); cursor:pointer; user-select:none;
+}
+.filter-check input { accent-color:var(--white); cursor:pointer; }
+.pagination {
+  display:flex; align-items:center; justify-content:center; gap:1rem;
+  margin:2rem 0 1rem;
+}
+.page-btn {
+  background:var(--bg2); border:1px solid var(--line); color:var(--text);
+  border-radius:8px; padding:.55rem 1rem; font-size:.82rem; cursor:pointer;
+  transition:border-color .15s, color .15s;
+}
+.page-btn:hover:not(:disabled) { border-color:var(--line2); color:var(--white); }
+.page-btn:disabled { opacity:.4; cursor:not-allowed; }
+.page-info { font-size:.82rem; color:var(--text2); min-width:90px; text-align:center; }

@@ -101,8 +101,8 @@ export default function AdminDashboardPage({ onChanged }) {
     setLoading(true)
     setMessage(null)
     try {
-      const [p, c, o, u] = await Promise.all([getProducts(), getCategories(), getOrders(), getUsers()])
-      setProducts(p.data)
+      const [p, c, o, u] = await Promise.all([getProducts({ pageSize: 100 }), getCategories(), getOrders(), getUsers()])
+      setProducts(p.data.items)
       setCategories(c.data)
       setOrders(o.data)
       setUsers(u.data)

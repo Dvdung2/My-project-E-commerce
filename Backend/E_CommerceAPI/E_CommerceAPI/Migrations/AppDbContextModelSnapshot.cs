@@ -319,7 +319,7 @@ namespace E_CommerceAPI.Migrations
                         .IsRequired();
 
                     b.HasOne("E_CommerceAPI.Models.Product", "Product")
-                        .WithMany()
+                        .WithMany("OrderItems")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -346,6 +346,11 @@ namespace E_CommerceAPI.Migrations
                 });
 
             modelBuilder.Entity("E_CommerceAPI.Models.Order", b =>
+                {
+                    b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("E_CommerceAPI.Models.Product", b =>
                 {
                     b.Navigation("OrderItems");
                 });
