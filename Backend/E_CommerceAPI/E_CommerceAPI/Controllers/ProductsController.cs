@@ -98,7 +98,24 @@ namespace E_CommerceAPI.Controllers
         {
             var product = await _context.Products.Include(p => p.Category).AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
             if (product == null) return NotFound();
-            return Ok(product);
+
+            var ratings = await _context.Reviews.Where(r => r.ProductId == id).Select(r => r.Rating).ToListAsync();
+            var averageRating = ratings.Count > 0 ? Math.Round(ratings.Average(), 1) : 0;
+
+            return Ok(new
+            {
+                product.Id,
+                product.Name,
+                product.Description,
+                product.Price,
+                product.ImageUrl,
+                product.Stock,
+                product.CategoryId,
+                product.Category,
+                product.CreatedAt,
+                averageRating,
+                reviewCount = ratings.Count
+            });
         }
 
         // POST: api/products

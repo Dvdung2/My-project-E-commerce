@@ -12,6 +12,7 @@ namespace E_CommerceAPI.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<Review> Reviews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,6 +22,11 @@ namespace E_CommerceAPI.Data
             // of the application-level check in AuthController.Register).
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
+                .IsUnique();
+
+            // One review per user per product.
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => new { r.ProductId, r.UserId })
                 .IsUnique();
 
             // Seed Categories

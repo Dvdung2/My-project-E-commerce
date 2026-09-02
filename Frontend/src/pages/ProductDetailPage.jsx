@@ -1,6 +1,94 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getProductById } from '../services/api'
+import { getProductById, getReviews, submitReview } from '../services/api'
+import { useAuth } from '../context/AuthContext'
+
+function Stars({ value, size = '1rem', onSelect }) {
+  return (
+    <span className="stars" style={{ fontSize: size }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <span
+          key={n}
+          className={`star ${n <= Math.round(value) ? 'on' : ''} ${onSelect ? 'clickable' : ''}`}
+          onClick={onSelect ? () => onSelect(n) : undefined}
+          role={onSelect ? 'button' : undefined}
+        >★</span>
+      ))}
+    </span>
+  )
+}
+
+function ReviewsSection({ productId }) {
+  const { user } = useAuth()
+  const [data, setData] = useState({ average: 0, count: 0, reviews: [] })
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+  const [msg, setMsg] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const load = () => getReviews(productId).then(r => setData(r.data)).catch(e => console.error(e))
+  useEffect(() => { load() }, [productId])
+
+  const submit = async e => {
+    e.preventDefault()
+    setSubmitting(true); setMsg(null)
+    try {
+      await submitReview(productId, { rating, comment })
+      setComment('')
+      setMsg({ ok: true, text: 'Cảm ơn đánh giá của bạn!' })
+      load()
+    } catch (err) {
+      const code = err.response?.status
+      setMsg({ ok: false, text: code === 403 ? 'Chỉ khách đã mua sản phẩm mới được đánh giá.' : (err.response?.data || 'Không gửi được đánh giá.') })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="reviews-section">
+      <div className="divider" style={{ margin: '3rem 0 2rem' }} />
+      <h2 className="section-title" style={{ fontSize: '1.6rem' }}>Đánh giá sản phẩm</h2>
+      <div className="reviews-summary">
+        <div className="reviews-avg">{data.average.toFixed(1)}</div>
+        <div>
+          <Stars value={data.average} size="1.1rem" />
+          <div className="reviews-count">{data.count} đánh giá</div>
+        </div>
+      </div>
+
+      {user && user.role === 'Customer' && (
+        <form className="review-form" onSubmit={submit}>
+          <div className="review-form-row">
+            <span style={{ fontSize: '.85rem', color: 'var(--text2)' }}>Chấm điểm:</span>
+            <Stars value={rating} size="1.4rem" onSelect={setRating} />
+          </div>
+          <textarea className="review-textarea" rows={3} placeholder="Chia sẻ cảm nhận của bạn..."
+            value={comment} onChange={e => setComment(e.target.value)} maxLength={1000} />
+          {msg && <div className={msg.ok ? 'ok-msg' : 'err-msg'}>{msg.text}</div>}
+          <button className="btn-primary" disabled={submitting} style={{ alignSelf: 'flex-start' }}>
+            {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+          </button>
+        </form>
+      )}
+
+      <div className="review-list">
+        {data.reviews.length === 0 ? (
+          <p style={{ color: 'var(--text3)', fontSize: '.88rem' }}>Chưa có đánh giá nào.</p>
+        ) : data.reviews.map(r => (
+          <div key={r.id} className="review-item">
+            <div className="review-item-head">
+              <span className="review-author">{r.userName}</span>
+              <Stars value={r.rating} size=".85rem" />
+              <span className="review-date">{new Date(r.createdAt).toLocaleDateString('vi-VN')}</span>
+            </div>
+            {r.comment && <p className="review-comment">{r.comment}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishlist }) {
   const { id } = useParams()
@@ -78,6 +166,15 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
             </button>
           </div>
           
+          {product.reviewCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.8rem' }}>
+              <Stars value={product.averageRating} size="1rem" />
+              <span style={{ fontSize: '.82rem', color: 'var(--text2)' }}>
+                {product.averageRating.toFixed(1)} · {product.reviewCount} đánh giá
+              </span>
+            </div>
+          )}
+
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--white)', marginBottom: '1.5rem' }}>
             ${product.price.toFixed(2)}
           </div>
@@ -135,6 +232,8 @@ export default function ProductDetailPage({ addToCart, wishlistIds, toggleWishli
           </div>
         </div>
       </div>
+
+      <ReviewsSection productId={product.id} />
     </div>
   )
 }
