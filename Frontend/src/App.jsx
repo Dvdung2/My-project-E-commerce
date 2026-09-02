@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { I18nProvider } from './context/I18nContext'
 import {
   getCart, addToCartApi, updateCartApi, removeFromCartApi, clearCartApi,
   getWishlistApi, toggleWishlistApi, removeWishlistApi
@@ -203,10 +204,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </AuthProvider>
+    </I18nProvider>
   )
 }

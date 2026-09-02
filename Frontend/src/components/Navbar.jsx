@@ -1,5 +1,15 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useI18n } from '../context/I18nContext'
+
+function LangToggle() {
+  const { lang, setLang } = useI18n()
+  return (
+    <button className="btn-ghost" onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')} title="Language">
+      {lang === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+    </button>
+  )
+}
 
 export default function Navbar({
   totalItems,
@@ -12,6 +22,7 @@ export default function Navbar({
   onProfileClick
 }) {
   const { user, logout } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -36,7 +47,8 @@ export default function Navbar({
 
         <div className="navbar-actions">
           <span className="admin-nav-user">{user.email}</span>
-          <button className="btn-ghost" onClick={handleLogout}>Đăng xuất</button>
+          <LangToggle />
+          <button className="btn-ghost" onClick={handleLogout}>{t('logout')}</button>
         </div>
       </nav>
     )
@@ -47,8 +59,8 @@ export default function Navbar({
       <Link to="/" className="navbar-logo">SHOPVN</Link>
 
       <div className="navbar-links">
-        <Link to="/">Trang chủ</Link>
-        <Link to="/products">Sản phẩm</Link>
+        <Link to="/">{t('home')}</Link>
+        <Link to="/products">{t('products')}</Link>
       </div>
 
       <div className="navbar-search">
@@ -56,7 +68,7 @@ export default function Navbar({
         <input
           id="search-input"
           type="text"
-          placeholder="Tìm sản phẩm..."
+          placeholder={t('searchPlaceholder')}
           value={search}
           onChange={handleSearch}
           onFocus={() => {
@@ -66,29 +78,30 @@ export default function Navbar({
       </div>
 
       <div className="navbar-actions">
+        <LangToggle />
         {user ? (
           <>
             {user.role === 'Admin' && (
               <button id="admin-button" className="btn-ghost" onClick={() => navigate('/admin')}>
-                Quản trị
+                {t('admin')}
               </button>
             )}
             <button id="profile-button" className="btn-ghost" onClick={onProfileClick}
               title={user.email}>
-              {user.fullName?.split(' ').pop() || 'Tài khoản'}
+              {user.fullName?.split(' ').pop() || t('account')}
             </button>
           </>
         ) : (
           <button id="login-button" className="btn-ghost" onClick={onAuthClick}>
-            Đăng nhập
+            {t('login')}
           </button>
         )}
         <button id="wishlist-button" className="btn-ghost wishlist-nav" onClick={onWishlistClick}>
-          Wishlist ({totalWishlist})
+          {t('wishlist')} ({totalWishlist})
           {totalWishlist > 0 && <span className="wishlist-dot">{totalWishlist}</span>}
         </button>
         <button id="cart-button" className="cart-btn" onClick={onCartClick}>
-          Giỏ hàng ({totalItems})
+          {t('cart')} ({totalItems})
           {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
         </button>
       </div>
