@@ -65,6 +65,7 @@ namespace E_CommerceAPI.Controllers
 
         // POST: api/auth/register
         [HttpPost("register")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             var email = dto.Email.Trim().ToLowerInvariant();
@@ -95,6 +96,7 @@ namespace E_CommerceAPI.Controllers
 
         // POST: api/auth/login
         [HttpPost("login")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var email = dto.Email.Trim().ToLowerInvariant();
