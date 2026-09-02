@@ -65,7 +65,7 @@ body {
 /* ── NAVBAR ── */
 .navbar {
   position:sticky; top:0; z-index:100; height:64px;
-  display:flex; align-items:center; gap:1.5rem; padding:0 2rem;
+  display:flex; align-items:center; gap:1.5rem; padding:0 2.5rem;
   background:rgba(255,255,255,0.82); backdrop-filter:blur(16px);
   border-bottom:1px solid var(--line);
 }
@@ -184,8 +184,9 @@ body {
 .stat-label { font-size:.72rem; color:var(--text3); margin-top:.15rem; letter-spacing:.3px; }
 
 /* ── CONTAINER / SECTION ── */
-.container { max-width:1280px; margin:0 auto; padding:0 2rem; }
-.section { padding:3.5rem 0; }
+.container { max-width:1280px; margin:0 auto; padding:0 2.5rem; }
+/* padding-block so it never zeroes the container's left/right padding */
+.section { padding-block:3.5rem; }
 .section-header { margin-bottom:1.75rem; }
 .home-section-head, .products-header {
   display:flex; align-items:flex-end; justify-content:space-between; gap:1rem;
